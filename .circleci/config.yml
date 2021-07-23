@@ -3,7 +3,7 @@ workflows:
   version: 2
   test:
     jobs:
-      - contract_cw721_basecargo buil
+      - contract_cw721_base
       - package_cw0
       - package_cw2
       - package_cw721
