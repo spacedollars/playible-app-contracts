@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     attr, to_binary, Binary, BlockInfo, Deps, DepsMut, Env, MessageInfo, Order, Pair, Response,
-    StdError, StdResult, SubMsg,
+    StdError, StdResult, SubMsg, WasmMsg, CosmosMsg
 };
 
 use cw0::maybe_addr;
@@ -205,12 +205,12 @@ pub fn execute_upgrade_token(
         rank: rank.clone()
     };
 
-    // TODO: Have the contract execute the mint function
-    // let _mint_response = StdResult::<CosmosMsg>::from(Ok(WasmMsg::Execute {
-    //     contract_addr: env.contract.address,
-    //     msg: to_binary(&mint_msg).unwrap(),
-    //     send: vec![],
-    // }.into()))?;
+    // Have the contract execute the mint function
+    let _mint_response = StdResult::<CosmosMsg>::from(Ok(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_binary(&mint_msg).unwrap(),
+        funds: vec![],
+    }.into()))?;
 
     Ok(Response {
         messages: vec![],
