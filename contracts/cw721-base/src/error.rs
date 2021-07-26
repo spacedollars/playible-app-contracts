@@ -17,4 +17,7 @@ pub enum ContractError {
 
     #[error("Minting cannot exceed the cap")]
     Capped {},
+
+    #[error("Token cannot be unlocked at this time")]
+    Locked {},
 }

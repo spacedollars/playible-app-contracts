@@ -13,6 +13,10 @@ pub struct TokenInfo {
     pub approvals: Vec<Approval>,
     /// Describes the rank of the NFT 
     pub rank: String,
+    /// Determines whether or not the NFT is locked for Fantasy Sports
+    pub is_locked: bool,
+    /// Determines the unlock date after the NFT has been locked
+    pub unlock_date: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

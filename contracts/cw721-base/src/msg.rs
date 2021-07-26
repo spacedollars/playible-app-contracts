@@ -56,21 +56,11 @@ pub enum ExecuteMsg {
     /// Remove previously granted ApproveAll permission
     RevokeAll { operator: String },
     /// Converts Base NFTs to Silver Rank
-    BaseToSilver {
-        /// NFTs to Burn
-        base_1: String,
-        base_2: String,
-        base_3: String,
-    },
-
-    /// Converts Silver NFTs to Gold Rank
-    SilverToGold {
-        /// NFTs to Burn
-        silver_1: String,
-        silver_2: String,
-        silver_3: String,
-        silver_4: String,
-        silver_5: String,
+    UpgradeToken {
+        /// Desired rank to upgrade to
+        rank: String,
+        /// NFTs to burn
+        tokens: Vec<String>,
     },
     /// Change the minter for the token, can only be called by the current minter
     UpdateMinter {
@@ -80,6 +70,18 @@ pub enum ExecuteMsg {
 
     /// Mint a new NFT, can only be called by the contract minter
     Mint(MintMsg),
+
+    /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
+    LockToken {
+        /// Unique ID of the NFT
+        token_id: String,
+    },
+
+    /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
+    UnlockToken {
+        /// Unique ID of the NFT
+        token_id: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -173,6 +175,10 @@ pub enum QueryMsg {
     /// Returns a boolean determining if the token is mintable
     IsMintable {
         rank: String,
+    },
+    /// Checks if a locked NFT can be unlocked
+    CanUnlockToken {
+        token_id: String,
     },
 }
 
