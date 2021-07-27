@@ -1,116 +1,67 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{HumanAddr, ReadonlyStorage, Storage, StdResult, Uint128};
-use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton,
-};
-
-pub const STATE_KEY: &[u8] = b"state";
-pub const TOTAL_DEPOSIT_KEY: &[u8] = b"total_deposit";
-pub const ANCHOR_ADDR_KEY: &[u8] = b"anchor_addr";
-pub const TERRAND_ADDR_KEY: &[u8] = b"terrand_addr";
-pub const PACK_LEN_KEY: &[u8] = b"pack_len";
-pub const TOKEN_ADDRESSES_PREFIX: &[u8] = b"token_addresses";
-pub const CONTRACT_COUNT_KEY: &[u8] = b"contract_count";
+use cosmwasm_std::{Addr, StdResult, Storage};
+use cosmwasm_storage::{Bucket, ReadonlyBucket};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct State {
+pub struct ContractInfo {
     /// Stable coin denomination. 
     pub stable_denom: String,
     // anchor contract address for depositing the rewards
-    pub anchor_addr: HumanAddr,
+    pub anchor_addr: String,
     // terrand contract address for calling Oracle's DRand
-    pub terrand_addr: HumanAddr,
+    pub terrand_addr: String,
     /// number of NFT players to be pulled per pack
-    pub pack_len: Uint128,
+    pub pack_len: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TokenData {
+pub struct TokenInfo {
     // ID of the athlete token
     pub athlete_id: String,
     // Contract address of the athlete token
     pub contract_addr: HumanAddr,
 }
 
-pub fn state<S: Storage>(storage: &mut S) -> Singleton<S, State> {
-    singleton(storage, STATE_KEY)
+pub const CONTRACT_INFO: Item<ContractInfo> = Item::new("contract_info");
+pub const TOTAL_DEPOSIT: Item<u64> = Item::new("total_deposit");
+pub const ANCHOR_ADDR: Item<Addr> = Item::new("anchor_addr");
+pub const TERRAND_ADDR: Item<Addr> = Item::new("terrand_addr");
+pub const PACK_LEN: Item<u64>  = Item::new("pack_len");
+pub const TOKEN_ADDRESSES_PREFIX: Item<u64>  = Item::new("token_addresses");
+pub const CONTRACT_COUNT: Item<u64>  = Item::new("contract_count");
+
+pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())
 }
 
-pub fn state_read<S: ReadonlyStorage>(
-    storage: &S,
-) -> ReadonlySingleton<S, State> {
-    singleton_read(storage, STATE_KEY)
-}
-
-pub fn total_deposit<S: Storage>(storage: &mut S) -> Singleton<S, u64> {
-    singleton(storage, TOTAL_DEPOSIT_KEY)
-}
-
-pub fn total_deposit_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, u64> {
-    singleton_read(storage, TOTAL_DEPOSIT_KEY)
-}
-
-pub fn increase_deposit<S: Storage>(storage: &mut S, amount: u64) -> StdResult<u64> {
-    let val = total_deposit_read(storage).load()? + amount;
-    total_deposit(storage).save(&val)?;
+pub fn increase_deposit(storage: &mut dyn Storage, amount: u64) -> StdResult<u64> {
+    let val = total_deposit(storage)? + amount;
+    TOTAL_DEPOSIT.save(storage, &val)?;
     Ok(val)
 }
 
-pub fn reduce_deposit<S: Storage>(storage: &mut S, amount: u64) -> StdResult<u64> {
-    let val = total_deposit_read(storage).load()? - amount;
-    total_deposit(storage).save(&val)?;
+pub fn decrease_deposit(storage: &mut dyn Storage, amount: u64) -> StdResult<u64> {
+    let val = total_deposit(storage)? - amount;
+    TOTAL_DEPOSIT.save(storage, &val)?;
     Ok(val)
 }
 
-pub fn token_addresses<S: Storage>(storage: &mut S) -> Bucket<S, HumanAddr> {
+pub fn contract_count(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(CONTRACT_COUNT.may_load(storage)?.unwrap_or_default())
+}
+
+pub fn increment_contract_count(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = contract_count(storage)? + 1;
+    CONTRACT_COUNT.save(storage, &val)?;
+    Ok(val)
+}
+
+pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<S, Addr> {
     bucket(TOKEN_ADDRESSES_PREFIX, storage)
 }
 
-pub fn token_addresses_read<S: ReadonlyStorage>(storage: &S) -> ReadonlyBucket<S, HumanAddr> {
+pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<S, Addr> {
     bucket_read(TOKEN_ADDRESSES_PREFIX, storage)
-}
-
-fn contract_count<S: Storage>(storage: &mut S) -> Singleton<S, u64> {
-    singleton(storage, CONTRACT_COUNT_KEY)
-}
-
-fn contract_count_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, u64> {
-    singleton_read(storage, CONTRACT_COUNT_KEY)
-}
-
-pub fn get_contract_count<S: ReadonlyStorage>(storage: &S) -> StdResult<u64> {
-    Ok(contract_count_read(storage).may_load()?.unwrap_or_default())
-}
-
-pub fn increment_contract_count<S: Storage>(storage: &mut S) -> StdResult<u64> {
-    let val = get_contract_count(storage)? + 1;
-    contract_count(storage).save(&val)?;
-    Ok(val)
-}
-
-pub fn anchor_addr<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
-    singleton(storage, ANCHOR_ADDR_KEY)
-}
-
-pub fn anchor_addr_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
-    singleton_read(storage, ANCHOR_ADDR_KEY)
-}
-
-pub fn terrand_addr<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
-    singleton(storage, TERRAND_ADDR_KEY)
-}
-
-pub fn terrand_addr_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
-    singleton_read(storage, TERRAND_ADDR_KEY)
-}
-
-pub fn pack_len<S: Storage>(storage: &mut S) -> Singleton<S, HumanAddr> {
-    singleton(storage, PACK_LEN_KEY)
-}
-
-pub fn pack_len_read<S: ReadonlyStorage>(storage: &S) -> ReadonlySingleton<S, HumanAddr> {
-    singleton_read(storage, PACK_LEN_KEY)
 }

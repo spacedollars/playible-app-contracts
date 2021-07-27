@@ -1,22 +1,23 @@
-use cosmwasm_std::{HumanAddr, CanonicalAddr, Uint128};
-use cosmwasm_bignumber::{Uint256, Decimal256};
-use crate::state::{TokenData};
+use cosmwasm_std::{CanonicalAddr, Uint128};
 use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_bignumber::{Uint256, Decimal256};
+use crate::state::{TokenData};
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {
+pub struct InstantiateMsg {
     /// Stable coin denomination. 
     pub stable_denom: String,
     // anchor contract address for depositing the rewards
-    pub anchor_addr: HumanAddr,
+    pub anchor_addr: String,
     // terrand contract address for calling Oracle's DRand
-    pub terrand_addr: HumanAddr,
+    pub terrand_addr: String,
     // athlete token data (optional)
     pub tokens: Option<Vec<TokenData>>,
     // Number of Player NFTs to be pulled per pack
-    pub pack_len: Uint128,
+    pub pack_len: u64,
 }
 
 /// This is like Cw721HandleMsg but we add a Mint command for an owner
@@ -24,7 +25,7 @@ pub struct InitMsg {
 /// use other control logic in any contract that inherits this.
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleMsg {
+pub enum ExecuteMsg {
     /// Purchase an athlete token pack
     PurchasePack {},
     /// Deposit Stablecoins into the contract to receive an athlete token
@@ -70,7 +71,7 @@ pub struct ContractCountResponse {
 pub enum TokenMsg {
     Mint {
         /// The owner of the newly minter NFT
-        owner: HumanAddr,
+        owner: String,
         /// Describes the rank of the NFT 
         rank: String,
     },
