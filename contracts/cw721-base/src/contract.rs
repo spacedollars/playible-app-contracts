@@ -50,54 +50,52 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps_mut: DepsMut,
-    deps: Deps,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Mint(msg) => execute_mint(deps_mut, deps, env, info, msg),
+        ExecuteMsg::Mint(msg) => execute_mint(deps, env, info, msg),
         ExecuteMsg::Approve {
             spender,
             token_id,
             expires,
-        } => execute_approve(deps_mut, env, info, spender, token_id, expires),
+        } => execute_approve(deps, env, info, spender, token_id, expires),
         ExecuteMsg::Revoke { spender, token_id } => {
-            execute_revoke(deps_mut, env, info, spender, token_id)
+            execute_revoke(deps, env, info, spender, token_id)
         }
         ExecuteMsg::ApproveAll { operator, expires } => {
-            execute_approve_all(deps_mut, env, info, operator, expires)
+            execute_approve_all(deps, env, info, operator, expires)
         }
-        ExecuteMsg::RevokeAll { operator } => execute_revoke_all(deps_mut, env, info, operator),
+        ExecuteMsg::RevokeAll { operator } => execute_revoke_all(deps, env, info, operator),
         ExecuteMsg::TransferNft {
             recipient,
             token_id,
-        } => execute_transfer_nft(deps_mut, env, info, recipient, token_id),
+        } => execute_transfer_nft(deps, env, info, recipient, token_id),
         ExecuteMsg::SendNft {
             contract,
             token_id,
             msg,
-        } => execute_send_nft(deps_mut, env, info, contract, token_id, msg),
+        } => execute_send_nft(deps, env, info, contract, token_id, msg),
         ExecuteMsg::UpgradeToken {
             rank,
             tokens,
-        } => execute_upgrade_token(deps_mut, env, info, rank, tokens),
+        } => execute_upgrade_token(deps, env, info, rank, tokens),
         ExecuteMsg::UpdateMinter {
             minter,
-        } => execute_update_minter(deps_mut, info, minter),
+        } => execute_update_minter(deps, info, minter),
         ExecuteMsg::LockToken {
             token_id,
-        } => execute_lock_token(deps_mut, env, info, token_id),
+        } => execute_lock_token(deps, env, info, token_id),
         ExecuteMsg::UnlockToken {
             token_id,
-        } => execute_unlock_token(deps_mut, deps, env, info, token_id),
+        } => execute_unlock_token(deps, env, info, token_id),
     }
 }
 
 pub fn execute_mint(
-    deps_mut: DepsMut,
-    deps: Deps,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: MintMsg,
@@ -106,7 +104,7 @@ pub fn execute_mint(
     let rank_copy_2 = msg.rank.clone();
     let rank_copy_3 = msg.rank.clone();
 
-    let minter = MINTER.load(deps_mut.storage)?;
+    let minter = MINTER.load(deps.storage)?;
 
     if info.sender != minter {
         if info.sender != env.contract.address { 
@@ -116,7 +114,7 @@ pub fn execute_mint(
 
     // create the token
     let token = TokenInfo {
-        owner: deps_mut.api.addr_validate(&msg.owner)?,
+        owner: deps.api.addr_validate(&msg.owner)?,
         approvals: vec![],
         rank: msg.rank,
         is_locked: false,
@@ -124,24 +122,24 @@ pub fn execute_mint(
     };
 
     // check if the token is mintable according to the listed cap
-    if !query_mintable(deps, rank_copy_1).unwrap() {
+    if !query_mintable(deps.as_ref(), rank_copy_1).unwrap() {
         return Err(ContractError::Capped {})
     }
 
     // generate a token id based on rank
-    let token_id = generate_token_id(deps, rank_copy_2).unwrap();
+    let token_id = generate_token_id(deps.as_ref(), rank_copy_2).unwrap();
 
-    tokens().update(deps_mut.storage, &token_id, |old| match old {
+    tokens().update(deps.storage, &token_id, |old| match old {
         Some(_) => Err(ContractError::Claimed {}),
         None => Ok(token),
     })?;
 
     if rank_copy_3.eq("S"){
-        increment_silver_tokens(deps_mut.storage)?;
+        increment_silver_tokens(deps.storage)?;
     } else if rank_copy_3.eq("G"){
-        increment_gold_tokens(deps_mut.storage)?;
+        increment_gold_tokens(deps.storage)?;
     } else  {
-        increment_base_tokens(deps_mut.storage)?;
+        increment_base_tokens(deps.storage)?;
     }
 
     Ok(Response {
@@ -199,10 +197,10 @@ pub fn execute_upgrade_token(
     }
 
     // create msg for minting
-    let mint_msg = ExecuteMsg::Mint(MintMsg {
+    let mint_msg = MintMsg {
         owner: info.sender.to_string(), 
         rank: rank.clone()
-    });
+    };
 
     // Have the contract execute the mint function
     let _mint_response = StdResult::<CosmosMsg>::from(Ok(WasmMsg::Execute {
@@ -252,26 +250,25 @@ pub fn execute_lock_token(
 }
 
 pub fn execute_unlock_token(
-    deps_mut: DepsMut,
-    deps: Deps,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     token_id: String,
 ) -> Result<Response, ContractError> {
-    let mut token = tokens().load(deps_mut.storage, &token_id)?;
+    let mut token = tokens().load(deps.storage, &token_id)?;
 
     if info.sender != token.owner {
         return Err(ContractError::Unauthorized {});
     }
 
-    if !query_unlock_token(deps, token_id.clone())?{
+    if !query_unlock_token(deps.as_ref(), token_id.clone())?{
         return Err(ContractError::Locked {});
     }
     
     token.is_locked = false;
     token.unlock_date = None;
 
-    tokens().save(deps_mut.storage, &token_id, &token)?;
+    tokens().save(deps.storage, &token_id, &token)?;
 
     Ok(Response {
         messages: vec![],
