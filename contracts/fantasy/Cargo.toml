@@ -1,13 +1,13 @@
 [package]
 name = "fantasy"
-version = "0.2.3"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
-edition = "2018"
-description = "Basic implementation cw721 NFTs"
+version = "0.1.0"
+authors = ["Angelo Matias, Kurt Aquino"]
+edition = "2021"
+description = "Initial Fantasy Contract Implementation"
 license = "Apache-2.0"
-repository = "https://github.com/CosmWasm/cosmwasm-plus"
-homepage = "https://cosmwasm.com"
-documentation = "https://docs.cosmwasm.com"
+repository = ""
+homepage = ""
+documentation = ""
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -25,17 +25,17 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = { version = "0.10.1" }
-cosmwasm-storage = { version = "0.10.1", features = ["iterator"] }
-cw0 = { path = "../../packages/cw0", version = "0.2.3" }
-cw2 = { path = "../../packages/cw2", version = "0.2.3" }
-cw721 = { path = "../../packages/cw721", version = "0.2.3" }
-cw20 = { path = "../../packages/cw20", version = "0.2.3" }
-schemars = "0.7"
+cw0 = { path = "../../packages/cw0", version = "0.7.0" }
+cw2 = { path = "../../packages/cw2", version = "0.7.0" }
+cw20 = { path = "../../packages/cw20", version = "0.7.0" }
+cw721 = { path = "../../packages/cw721", version = "0.7.0" }
+
+cosmwasm-std = { version = "0.15.0" }
+schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-snafu = { version = "0.6.3" }
+thiserror = { version = "1.0.23" }
 terra-cosmwasm = { version = "1.2" }
 cosmwasm-bignumber = "1.0"
 
 [dev-dependencies]
-cosmwasm-schema = { version = "0.10.1" }
+cosmwasm-schema = { version = "0.15.0" }
