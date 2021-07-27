@@ -11,13 +11,12 @@ pub struct TokenInfo {
     pub owner: Addr,
     /// Approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     pub approvals: Vec<Approval>,
-
-    /// Identifies the asset to which this NFT represents
-    pub name: String,
-    /// Describes the asset to which this NFT represents
-    pub description: String,
-    /// A URI pointing to an image representing the asset
-    pub image: Option<String>,
+    /// Describes the rank of the NFT 
+    pub rank: String,
+    /// Determines whether or not the NFT is locked for Fantasy Sports
+    pub is_locked: bool,
+    /// Determines the unlock date after the NFT has been locked
+    pub unlock_date: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -36,18 +35,40 @@ impl Approval {
 
 pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("nft_info");
 pub const MINTER: Item<Addr> = Item::new("minter");
-pub const TOKEN_COUNT: Item<u64> = Item::new("num_tokens");
+pub const BASE_COUNT: Item<u64> = Item::new("base_tokens");
+pub const SILVER_COUNT: Item<u64> = Item::new("silver_tokens");
+pub const GOLD_COUNT: Item<u64>  = Item::new("gold_tokens");
 
 // Stored as (granter, operator) giving operator full control over granter's account
 pub const OPERATORS: Map<(&Addr, &Addr), Expiration> = Map::new("operators");
 
-pub fn num_tokens(storage: &dyn Storage) -> StdResult<u64> {
-    Ok(TOKEN_COUNT.may_load(storage)?.unwrap_or_default())
+pub fn base_tokens(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(BASE_COUNT.may_load(storage)?.unwrap_or_default())
 }
 
-pub fn increment_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
-    let val = num_tokens(storage)? + 1;
-    TOKEN_COUNT.save(storage, &val)?;
+pub fn increment_base_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = base_tokens(storage)? + 1;
+    BASE_COUNT.save(storage, &val)?;
+    Ok(val)
+}
+
+pub fn silver_tokens(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(SILVER_COUNT.may_load(storage)?.unwrap_or_default())
+}
+
+pub fn increment_silver_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = silver_tokens(storage)? + 1;
+    SILVER_COUNT.save(storage, &val)?;
+    Ok(val)
+}
+
+pub fn gold_tokens(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(GOLD_COUNT.may_load(storage)?.unwrap_or_default())
+}
+
+pub fn increment_gold_tokens(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = gold_tokens(storage)? + 1;
+    GOLD_COUNT.save(storage, &val)?;
     Ok(val)
 }
 

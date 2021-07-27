@@ -88,19 +88,20 @@ pub struct NumTokensResponse {
 pub struct ContractInfoResponse {
     pub name: String,
     pub symbol: String,
+    /// cap is the maximum number of tokens that could be minted
+    pub base_cap: u64,
+    pub silver_cap: u64,
+    pub gold_cap: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct NftInfoResponse {
-    /// Identifies the asset to which this NFT represents
-    pub name: String,
-    /// Describes the asset to which this NFT represents
-    pub description: String,
-    /// "A URI pointing to a resource with mime type image/* representing the asset to which this
-    /// NFT represents. Consider making any images at a width between 320 and 1080 pixels and aspect
-    /// ratio between 1.91:1 and 4:5 inclusive.
-    /// TODO: Use https://docs.rs/url_serde for type-safety
-    pub image: Option<String>,
+    /// Identifies the rank of the NFT
+    pub rank: String,
+    /// Determines whether or not the NFT is locked for Fantasy Sports
+    pub is_locked: bool,
+    /// Determines the unlock date after the NFT has been locked
+    pub unlock_date: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

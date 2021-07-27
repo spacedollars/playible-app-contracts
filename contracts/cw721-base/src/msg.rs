@@ -14,6 +14,13 @@ pub struct InstantiateMsg {
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
+
+    // Maximum number of base tokens
+    pub base_cap: u64,
+    // Maximum number of silver tokens
+    pub silver_cap: u64,
+    // Maximum number of gold tokens
+    pub gold_cap: u64,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner
@@ -48,23 +55,41 @@ pub enum ExecuteMsg {
     },
     /// Remove previously granted ApproveAll permission
     RevokeAll { operator: String },
+    /// Converts Base NFTs to Silver Rank
+    UpgradeToken {
+        /// Desired rank to upgrade to
+        rank: String,
+        /// NFTs to burn
+        tokens: Vec<String>,
+    },
+    /// Change the minter for the token, can only be called by the current minter
+    UpdateMinter {
+        /// Address of the new minter
+        minter: String,
+    },
 
     /// Mint a new NFT, can only be called by the contract minter
     Mint(MintMsg),
+
+    /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
+    LockToken {
+        /// Unique ID of the NFT
+        token_id: String,
+    },
+
+    /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
+    UnlockToken {
+        /// Unique ID of the NFT
+        token_id: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintMsg {
-    /// Unique ID of the NFT
-    pub token_id: String,
     /// The owner of the newly minter NFT
     pub owner: String,
-    /// Identifies the asset to which this NFT represents
-    pub name: String,
-    /// Describes the asset to which this NFT represents (may be empty)
-    pub description: Option<String>,
-    /// A URI pointing to an image representing the asset
-    pub image: Option<String>,
+    /// Describes the rank of the NFT 
+    pub rank: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -86,8 +111,6 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    /// Total number of tokens issued
-    NumTokens {},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
@@ -107,10 +130,12 @@ pub enum QueryMsg {
         include_expired: Option<bool>,
     },
 
+    /// Total number of tokens issued
+    BaseTokens {},
     /// With Enumerable extension.
     /// Returns all tokens owned by the given address, [] if unset.
     /// Return type: TokensResponse.
-    Tokens {
+    OwnerBaseTokens {
         owner: String,
         start_after: Option<String>,
         limit: Option<u32>,
@@ -118,13 +143,43 @@ pub enum QueryMsg {
     /// With Enumerable extension.
     /// Requires pagination. Lists all token_ids controlled by the contract.
     /// Return type: TokensResponse.
-    AllTokens {
+    AllBaseTokens {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+
+    SilverTokens {},
+    OwnerSilverTokens {
+        owner: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    AllSilverTokens {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+
+    GoldTokens {}, 
+    OwnerGoldTokens {
+        owner: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    AllGoldTokens {
         start_after: Option<String>,
         limit: Option<u32>,
     },
 
     // Return the minter
     Minter {},
+    /// Returns a boolean determining if the token is mintable
+    IsMintable {
+        rank: String,
+    },
+    /// Checks if a locked NFT can be unlocked
+    CanUnlockToken {
+        token_id: String,
+    },
 }
 
 /// Shows who can mint these tokens
