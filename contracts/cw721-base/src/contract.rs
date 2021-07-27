@@ -85,7 +85,7 @@ pub fn execute(
         } => execute_upgrade_token(deps_mut, env, info, rank, tokens),
         ExecuteMsg::UpdateMinter {
             minter,
-        } => execute_update_minter(deps_mut, env, info, minter),
+        } => execute_update_minter(deps_mut, info, minter),
         ExecuteMsg::LockToken {
             token_id,
         } => execute_lock_token(deps_mut, env, info, token_id),
@@ -159,7 +159,6 @@ pub fn execute_mint(
 
 pub fn execute_update_minter(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     minter: String,
 ) -> Result<Response, ContractError> {
@@ -186,7 +185,7 @@ pub fn execute_update_minter(
 }
 
 pub fn execute_upgrade_token(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     rank: String,
@@ -196,14 +195,14 @@ pub fn execute_upgrade_token(
     let burn_addr = env.contract.address.to_string();
 
     for token in tokens.iter() {
-        _transfer_nft(deps, &env, &info, &burn_addr, &token)?;
+        _transfer_nft(deps.branch(), &env, &info, &burn_addr, &token)?;
     }
 
     // create msg for minting
-    let mint_msg = MintMsg {
+    let mint_msg = ExecuteMsg::Mint(MintMsg {
         owner: info.sender.to_string(), 
         rank: rank.clone()
-    };
+    });
 
     // Have the contract execute the mint function
     let _mint_response = StdResult::<CosmosMsg>::from(Ok(WasmMsg::Execute {
@@ -216,7 +215,7 @@ pub fn execute_upgrade_token(
         messages: vec![],
         attributes: vec![
             attr("action", "upgrade_token"),
-            attr("sender", info.sender.to_string()),
+            attr("sender", info.sender),
         ],
         events: vec![],
         data: None,
