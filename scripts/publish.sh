@@ -9,7 +9,7 @@ BASE_PACKAGES="cw0"
 ALL_PACKAGES="cw2 cw20 cw721"
 
 # these are imported by other contracts
-BASE_CONTRACTS="cw20-base cw721-base"
+BASE_CONTRACTS="cw20-base cw721-base fantasy"
 ALL_CONTRACTS=""
 
 SLEEP_TIME=30
