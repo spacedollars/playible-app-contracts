@@ -4,7 +4,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_bignumber::{Uint256, Decimal256};
-use crate::state::{TokenData};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -15,14 +14,11 @@ pub struct InstantiateMsg {
     // terrand contract address for calling Oracle's DRand
     pub terrand_addr: String,
     // athlete token data (optional)
-    pub tokens: Option<Vec<TokenData>>,
+    pub tokens: Option<Vec<String>>,
     // Number of Player NFTs to be pulled per pack
     pub pack_len: u64,
 }
 
-/// This is like Cw721HandleMsg but we add a Mint command for an owner
-/// to make this stand-alone. You will likely want to remove mint and
-/// use other control logic in any contract that inherits this.
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
@@ -37,15 +33,21 @@ pub enum ExecuteMsg {
     },
     /// Add athlete token contract address
     AddToken {
-        tokens: Vec<TokenData>,
+        tokens: Vec<String>,
     },
+    /// Performs the turnover of tokens to another instance of Fantasy contract
+    TokenTurnover {
+        new_contract: String
+    },
+    /// For testing stuff
+    Test {}, 
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Returns the state for the Fantasy Contract
-    State {},
+    /// Returns the contract info for the Fantasy Contract
+    ContractInfo {},
     /// Returns the contract address of the corresponding token id
     TokenContract {
         athlete_id: String,
@@ -57,7 +59,8 @@ pub enum QueryMsg {
         athlete_id: String,
     },
     /// Returns the total number of Athlete Contracts saved 
-    ContractCount {},
+    TokenCount {},
+    LastRound {},
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -75,16 +78,29 @@ pub enum TokenMsg {
         /// Describes the rank of the NFT 
         rank: String,
     },
-}
-
-/// IsMintable Message
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum QueryMintMsg {
+    UpdateMinter {
+        /// Address of the new minter
+        minter: String,
+    },
     IsMintable {
         /// Describes the rank of the NFT 
         rank: String,
     },
+}
+
+/// Terrand Messages
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum TerrandMsg {
+    LatestDrand {}
+}
+
+/// Terrand Responses
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct LatestRandomResponse {
+    pub round: u64,
+    pub randomness: Binary,
+    pub worker: String,
 }
 
 /// Anchor Messages

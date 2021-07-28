@@ -16,21 +16,14 @@ pub struct ContractInfo {
     pub pack_len: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TokenInfo {
-    // ID of the athlete token
-    pub athlete_id: String,
-    // Contract address of the athlete token
-    pub contract_addr: HumanAddr,
-}
-
 pub const CONTRACT_INFO: Item<ContractInfo> = Item::new("contract_info");
 pub const TOTAL_DEPOSIT: Item<u64> = Item::new("total_deposit");
 pub const ANCHOR_ADDR: Item<Addr> = Item::new("anchor_addr");
 pub const TERRAND_ADDR: Item<Addr> = Item::new("terrand_addr");
 pub const PACK_LEN: Item<u64>  = Item::new("pack_len");
 pub const TOKEN_ADDRESSES_PREFIX: Item<u64>  = Item::new("token_addresses");
-pub const CONTRACT_COUNT: Item<u64>  = Item::new("contract_count");
+pub const TOKEN_COUNT: Item<u64>  = Item::new("token_count");
+pub const LAST_ROUND: Item<u64>  = Item::new("last_round");
 
 pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
     Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())
@@ -48,13 +41,13 @@ pub fn decrease_deposit(storage: &mut dyn Storage, amount: u64) -> StdResult<u64
     Ok(val)
 }
 
-pub fn contract_count(storage: &dyn Storage) -> StdResult<u64> {
-    Ok(CONTRACT_COUNT.may_load(storage)?.unwrap_or_default())
+pub fn token_count(storage: &dyn Storage) -> StdResult<u64> {
+    Ok(TOKEN_COUNT.may_load(storage)?.unwrap_or_default())
 }
 
-pub fn increment_contract_count(storage: &mut dyn Storage) -> StdResult<u64> {
-    let val = contract_count(storage)? + 1;
-    CONTRACT_COUNT.save(storage, &val)?;
+pub fn increment_token_count(storage: &mut dyn Storage) -> StdResult<u64> {
+    let val = token_count(storage)? + 1;
+    TOKEN_COUNT.save(storage, &val)?;
     Ok(val)
 }
 

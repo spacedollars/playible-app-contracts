@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Coin, 
     Empty, 
     Extern, 
-    HumanAddr, 
+    Addr, 
     Querier,
     QueryRequest, 
     StdResult, 
@@ -13,13 +13,12 @@ use cosmwasm_std::{
     WasmQuery, 
     CosmosMsg
 };
-use cw20::{
-    BalanceResponse
-};
+use cw20::{BalanceResponse};
+use crate::msg::{LatestRandomResponse};
 
 pub fn encode_msg_execute(
     msg: Binary,
-    address: HumanAddr,
+    address: Addr,
     coin: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
     Ok(WasmMsg::Execute {
@@ -47,6 +46,14 @@ pub fn encode_msg_query(msg: Binary, address: HumanAddr) -> StdResult<QueryReque
         msg: msg,
     }
     .into())
+}
+
+pub fn wrapper_msg_get_randomness<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+    query: QueryRequest<Empty>,
+) -> StdResult<LatestRandomResponse> {
+    let res: LatestRandomResponse = deps.querier.query(&query)?;
+    Ok(res)
 }
 
 pub fn wrapper_msg_anchor_balance<S: Storage, A: Api, Q: Querier>(
