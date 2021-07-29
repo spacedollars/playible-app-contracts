@@ -12,8 +12,8 @@ pub enum ContractError {
     #[error("token_id already claimed")]
     Claimed {},
 
-    #[error("Cannot set approval that is already expired")]
-    Expired {},
+    #[error("The current round has already been used. Please wait for the next round.")]
+    UsedRound {},
 
     #[error("Minting cannot exceed the cap")]
     Capped {},

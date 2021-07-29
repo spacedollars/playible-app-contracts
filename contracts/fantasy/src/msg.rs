@@ -1,4 +1,4 @@
-use cosmwasm_std::{CanonicalAddr, Uint128};
+use cosmwasm_std::{Binary, CanonicalAddr, Uint128};
 use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -61,11 +61,6 @@ pub enum QueryMsg {
     /// Returns the total number of Athlete Contracts saved 
     TokenCount {},
     LastRound {},
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct ContractCountResponse {
-    pub count: u64,
 }
 
 /// Athlete Token Message

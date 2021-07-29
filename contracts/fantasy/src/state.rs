@@ -2,7 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, StdResult, Storage};
-use cosmwasm_storage::{Bucket, ReadonlyBucket};
+use cosmwasm_storage::{bucket, bucket_read, Bucket, ReadonlyBucket};
+use cw_storage_plus::{Item};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ContractInfoResponse {
@@ -21,9 +22,9 @@ pub const TOTAL_DEPOSIT: Item<u64> = Item::new("total_deposit");
 pub const ANCHOR_ADDR: Item<Addr> = Item::new("anchor_addr");
 pub const TERRAND_ADDR: Item<Addr> = Item::new("terrand_addr");
 pub const PACK_LEN: Item<u64>  = Item::new("pack_len");
-pub const TOKEN_ADDRESSES_PREFIX: Item<u64>  = Item::new("token_addresses");
 pub const TOKEN_COUNT: Item<u64>  = Item::new("token_count");
 pub const LAST_ROUND: Item<u64>  = Item::new("last_round");
+pub const TOKEN_ADDRESSES_PREFIX: &[u8] = b"token_addresses";
 
 pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
     Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())

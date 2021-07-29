@@ -1,15 +1,11 @@
 use cosmwasm_std::{
-    Deps,
-    Api, 
+    Deps, 
     Binary, 
     Coin, 
     Empty, 
-    Extern, 
     Addr, 
-    Querier,
     QueryRequest, 
     StdResult, 
-    Storage, 
     WasmMsg, 
     WasmQuery, 
     CosmosMsg
@@ -33,7 +29,7 @@ pub fn encode_msg_execute(
 pub fn encode_raw_query(
     deps: Deps,
     key: Binary, 
-    address: HumanAddr
+    address: Addr
 ) -> StdResult<Binary> {
     Ok(deps.querier.query(&QueryRequest::Wasm(WasmQuery::Raw {
         contract_addr: address,
@@ -41,7 +37,7 @@ pub fn encode_raw_query(
     }))?)
 }
 
-pub fn encode_msg_query(msg: Binary, address: HumanAddr) -> StdResult<QueryRequest<Empty>> {
+pub fn encode_msg_query(msg: Binary, address: Addr) -> StdResult<QueryRequest<Empty>> {
     Ok(WasmQuery::Smart {
         contract_addr: address,
         msg: msg,

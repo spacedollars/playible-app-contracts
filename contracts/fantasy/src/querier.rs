@@ -1,6 +1,6 @@
 use cosmwasm_bignumber::{Decimal256};
 use cosmwasm_std::{
-    Deps, Api, Coin, Querier, StdResult, Storage, Uint128,
+    Deps, Coin, StdResult, Uint128,
 };
 use terra_cosmwasm::TerraQuerier;
 
