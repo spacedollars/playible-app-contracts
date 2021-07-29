@@ -1,4 +1,5 @@
 use cosmwasm_std::{
+    Deps,
     Api, 
     Binary, 
     Coin, 
@@ -29,8 +30,8 @@ pub fn encode_msg_execute(
     .into())
 }
 
-pub fn encode_raw_query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn encode_raw_query(
+    deps: Deps,
     key: Binary, 
     address: HumanAddr
 ) -> StdResult<Binary> {
@@ -48,16 +49,16 @@ pub fn encode_msg_query(msg: Binary, address: HumanAddr) -> StdResult<QueryReque
     .into())
 }
 
-pub fn wrapper_msg_get_randomness<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn wrapper_msg_get_randomness(
+    deps: Deps,
     query: QueryRequest<Empty>,
 ) -> StdResult<LatestRandomResponse> {
     let res: LatestRandomResponse = deps.querier.query(&query)?;
     Ok(res)
 }
 
-pub fn wrapper_msg_anchor_balance<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+pub fn wrapper_msg_anchor_balance(
+    deps: Deps,
     query: QueryRequest<Empty>,
 ) -> StdResult<BalanceResponse> {
     let res: BalanceResponse = deps.querier.query(&query)?;

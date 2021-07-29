@@ -8,14 +8,16 @@ use cosmwasm_bignumber::{Decimal256};
 use cw2::set_contract_version;
 use cw20::{Cw20HandleMsg};
 
+use crate::error::ContractError;
 use crate::msg::{
-    HandleMsg, InitMsg, QueryMsg, AnchorMsg, TerrandMsg, TokenMsg, ConfigResponse, 
-    LatestRandomResponse, StateResponse, QueryMintMsg, ContractCountResponse,
+    HandleMsg, InitMsg, QueryMsg, TokenMsg, TerrandMsg, AnchorMsg,
+    ContractCountResponse, LatestRandomResponse, ConfigResponse, StateResponse,
 };
 use crate::state::{
-    increase_deposit, last_round, last_round_read, total_deposit, total_deposit_read, state, state_read, State,
+    CONTRACT_INFO, LAST_ROUND, ContractInfoResponse,
+    total_deposit, increase_deposit, decrease_deposit,
+    token_count, increment_token_count,
     token_addresses, token_addresses_read,
-    get_contract_count, increment_contract_count,
 };
 use crate::helpers::{
     encode_msg_execute,
@@ -28,14 +30,16 @@ use crate::querier::{deduct_tax};
 const CONTRACT_NAME: &str = "crates.io:fantasy";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn init<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    msg: InitMsg,
-) -> StdResult<InitResponse> {
-    set_contract_version(&mut deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let info = State {
+    let info = ContractInfoResponse {
         stable_denom: msg.stable_denom,
         anchor_addr: msg.anchor_addr,
         terrand_addr: msg.terrand_addr,
@@ -44,76 +48,80 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     match msg.tokens {
         Some(m) => handle_add_token(deps, env, m)?,
-        None => HandleResponse {
+        None => Response {
             messages: vec![],
-            log: vec![],
+            attributes: vec![],
+            events: vec![],
             data: None,
         },
     };
 
-    state(&mut deps.storage).save(&info)?;
-    last_round(&mut deps.storage).save(&0)?;
-    total_deposit(&mut deps.storage).save(&0)?;
-    Ok(InitResponse::default())
+    CONTRACT_INFO.save(deps.storage, &info)?;
+    TOTAL_DEPOSIT.save(deps.storage, &0)?;
+    TOKEN_COUNT.save(deps.storage, &0)?;
+    LAST_ROUND.save(deps.storage, &0)?;
+    
+    Ok(Response::default())
 }
 
-pub fn handle<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
     env: Env,
-    msg: HandleMsg,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::PurchasePack {} => handle_purchase(deps, env),
-        HandleMsg::DepositStable {} => handle_deposit(deps, env),
-        HandleMsg::RedeemStable {
+        ExecuteMsg::PurchasePack {} => execute_purchase(deps, env, info),
+        ExecuteMsg::DepositStable {} => execute_deposit(deps, env, info),
+        ExecuteMsg::RedeemStable {
             amount,
-        } => handle_redeem(deps, env, amount),
-        HandleMsg::AddToken {
+        } => execute_redeem(deps, env, info, amount),
+        ExecuteMsg::AddToken {
             tokens
-        } => handle_add_token(deps, env, tokens),
-        HandleMsg::TokenTurnover {
+        } => execute_add_token(deps, env, tokens),
+        ExecuteMsg::TokenTurnover {
             new_contract
-        } => handle_token_turnover(deps, env, new_contract),
-        HandleMsg::Test {} => handle_test(deps, env),
+        } => execute_token_turnover(deps, env, new_contract),
+        ExecuteMsg::Test {} => execute_test(deps, env),
     }
 }
 
-pub fn handle_test<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
+pub fn execute_test(
+    _deps: DepsMut,
     _env: Env,
-) -> StdResult<HandleResponse> {
+) -> Result<Response, ContractError> {
 
-    let response = HandleResponse {
+    let response = Response {
         messages: vec![],
-        log: vec![
-            log("action", "test"),
+        attributes: vec![
+            attr("action", "test"),
         ],
+        events: vec![],
         data: None,
     };
     
     Ok(response)
 }
 
-
-pub fn handle_purchase<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_purchase(
+    deps: DepsMut,
     env: Env,
-) -> StdResult<HandleResponse> {
-    let sender_raw = deps.api.canonical_address(&env.message.sender)?;
-    let sender = deps.api.human_address(&sender_raw)?;
+    info: MessageInfo, 
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
 
     // TODO: Generate N token ids based on the pack_len using Terrand
     let mut mint_responses = vec![];
 
-    
     // Load pack_len from the state
-    let pack_len: u128 = query_state(&deps).unwrap().pack_len.u128();
-    let token_count: u128 = query_contract_count(&deps).unwrap().count.into();
+    let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
+    let token_count = query_contract_count(deps.as_ref()).unwrap().count);
    
     let mut mintable_token_list = vec![];
 
     for n in 0..token_count {
-        if query_token_mintable(&deps, n.to_string()).unwrap_or(false){    
+        if query_token_mintable(deps.as_ref(), n.to_string()).unwrap_or(false){    
                 // Add athlete_id to the mintable list
                 // Increment mintable tokens
                 mintable_token_list.push(n);
@@ -122,15 +130,15 @@ pub fn handle_purchase<S: Storage, A: Api, Q: Querier>(
 
     // Generate the list of athlete IDs to be minted
     //let hex_list = query_terrand(deps, env, pack_len).unwrap();
-    let hex_list = match query_terrand(deps, env, pack_len) {
+    let hex_list = match query_terrand(deps.as_ref(), env, pack_len) {
         Ok(list) => list,
         Err(error) => return Err(error),
     };
-    let mint_index_list = hex_to_athlete(&deps, hex_list.clone()).unwrap();
+    let mint_index_list = hex_to_athlete(deps.as_ref(), hex_list.clone()).unwrap();
 
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
-        let token_address = query_token_address(&deps, athlete_id).unwrap();
+        let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
 
         //TODO: Handle error from query_token_address. Ensure that the generated token ids are a subset of the token addresses
         
@@ -149,25 +157,24 @@ pub fn handle_purchase<S: Storage, A: Api, Q: Querier>(
 
         mint_responses.push(mint_res);
     }
-
-    let response = HandleResponse {
-        messages: mint_responses,
-        log: vec![
-            log("action", "purchase"),
-            log("from", &sender),
-        ],
-        data: None,
-    };
     
-    Ok(response)
+    Ok(Response {
+        messages: mint_responses,
+        attributes: vec![
+            attr("action", "purchase"),
+            attr("from", &sender),
+        ],
+        events: vec![],
+        data: None,
+    })
 }
 
-pub fn handle_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_deposit(
+    deps: DepsMut,
     env: Env,
-) -> StdResult<HandleResponse> {
-    let sender_raw = deps.api.canonical_address(&env.message.sender)?;
-    let sender = deps.api.human_address(&sender_raw)?;
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
 
     let deposit_amount: Uint128 = env
         .message
@@ -179,13 +186,13 @@ pub fn handle_deposit<S: Storage, A: Api, Q: Querier>(
     
     // coin deposit minus tax
     let coin_deposit = deduct_tax(
-        &deps, 
+        deps, 
         Coin {
             denom: "uusd".to_string(),
             amount: deposit_amount
         }
     )?;
-    let contract = query_state(&deps).unwrap().anchor_addr;
+    let contract = query_contract_info(deps.as_ref()).unwrap().anchor_addr;
     
     // execute anchor's deposit stable contract
     let deposit_msg = to_binary(&AnchorMsg::DepositStable{})?;
@@ -195,34 +202,33 @@ pub fn handle_deposit<S: Storage, A: Api, Q: Querier>(
         vec![coin_deposit.clone()]
     )?;
 
-    increase_deposit(&mut deps.storage, coin_deposit.amount.u128() as u64)?;
-
-    let response = HandleResponse {
-        messages: vec![anchor_res],
-        log: vec![
-            log("action", "deposit"),
-            log("from", &sender),
-            log("to", &contract),
-            log("deposit_amount", &coin_deposit.amount),
-        ],
-        data: None,
-    };
+    increase_deposit(deps, coin_deposit.amount.u128() as u64)?;
     
-    Ok(response)
+    Ok(Response {
+        messages: vec![anchor_res],
+        attributes: vec![
+            attr("action", "deposit"),
+            attr("from", &sender),
+            attr("to", &contract),
+            attr("deposit_amount", &coin_deposit.amount),
+        ],
+        events: vec![],
+        data: None,
+    })
 }
 
-pub fn handle_redeem<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_redeem(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     amount: Uint128,
-) -> StdResult<HandleResponse> {
-    let sender_raw = deps.api.canonical_address(&env.message.sender)?;
-    let sender = deps.api.human_address(&sender_raw)?;
-    let anchor_contract = query_state(&deps).unwrap().anchor_addr;
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
+    let anchor_contract = query_contract_info(deps.as_ref()).unwrap().anchor_addr;
 
      // get exchange rate from anchor state
      let state_bin: Binary = encode_raw_query(
-        &deps, 
+        deps, 
         Binary::from(to_length_prefixed(b"state")),
         anchor_contract.clone(),
     )?;
@@ -234,17 +240,9 @@ pub fn handle_redeem<S: Storage, A: Api, Q: Querier>(
     let contract_msg = to_binary(&AnchorMsg::RedeemStable{})?;
     let aust_amount = amount * (Decimal256::one() / exchange_rate).into();
 
-    let logs = vec![
-        log("action", "receive"),
-        log("from", &sender),
-        log("to", &anchor_contract),
-        log("amount", &amount),
-        log("aust_amount", &aust_amount),
-    ];
-
     // get anchor usd (aust) contract address from anchor config
     let config_bin: Binary = encode_raw_query(
-        &deps,
+        deps,
         Binary::from(to_length_prefixed(b"config")),
         anchor_contract.clone(),
     )?;
@@ -266,54 +264,57 @@ pub fn handle_redeem<S: Storage, A: Api, Q: Querier>(
         vec![]
     )?;
 
-    let res = HandleResponse {
+    Ok(Response {
         messages: vec![anchor_response],
-        log: logs,
+        attributes: vec![
+            attr("action", "receive"),
+            attr("from", &sender),
+            attr("to", &anchor_contract),
+            attr("amount", &amount),
+            attr("aust_amount", &aust_amount),
+        ];,
+        events: vec![],
         data: None,
-    };
-    
-    Ok(res)
+    })
 }
 
-pub fn handle_add_token<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_add_token(
+    deps: DepsMut,
     _env: Env,
     tokens: Vec<HumanAddr>,
-) -> StdResult<HandleResponse> {
+) -> Result<Response, ContractError> {
 
     for token in tokens.iter() {
-        let contract_count = query_contract_count(&deps).unwrap();
-        let athlete_id = contract_count.count;
-        token_addresses(&mut deps.storage).update(&athlete_id.to_string().as_bytes(), |old| match old {
+        let athlete_id = query_token_count(deps.as_ref()).unwrap().count;
+        token_addresses(deps.storage).update(&athlete_id.to_string().as_bytes(), |old| match old {
             Some(_) => Err(StdError::generic_err("athlete_id already claimed")),
             None => Ok(token.clone()),
         })?;
         
-        increment_contract_count(&mut deps.storage)?;
+        increment_token_count(deps.storage)?;
     }
-
-    let response = HandleResponse {
-        messages: vec![],
-        log: vec![
-            log("action", "add_token"),
-        ],
-        data: None,
-    };
     
-    Ok(response)
+    Ok(response = Response {
+        messages: vec![],
+        attributes: vec![
+            attr("action", "add_token"),
+        ],
+        events: vec![],
+        data: None,
+    })
 }
 
-pub fn handle_token_turnover<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+pub fn execute_token_turnover(
+    deps: DepsMut,
     _env: Env,
     new_contract: HumanAddr,
-) -> StdResult<HandleResponse> {
+) -> Result<Response, ContractError> {
 
-    let contract_count = query_contract_count(&deps).unwrap();
+    let token_count = query_contract_count(deps.as_ref()).unwrap().count;
     let mut token_responses = vec![];
 
-    for athlete_id in 0..contract_count.count {
-        let contract_addr = query_token_address(&deps, athlete_id.to_string()).unwrap();
+    for athlete_id in 0..token_count {
+        let contract_addr = query_token_address(deps.as_ref(), athlete_id.to_string()).unwrap();
 
         let update_msg = TokenMsg::UpdateMinter {
             minter: new_contract.clone(),
@@ -326,86 +327,92 @@ pub fn handle_token_turnover<S: Storage, A: Api, Q: Querier>(
         )?;
 
         // TODO: handle error from token_res
-
         token_responses.push(token_res);
-
     }
-
-    let response = HandleResponse {
-        messages: token_responses,
-        log: vec![
-            log("action", "token_turnover"),
-        ],
-        data: None,
-    };
     
-    Ok(response)
+    Ok(Response {
+        messages: token_responses,
+        attributes: vec![
+            attr("action", "token_turnover"),
+        ],
+        events: vec![],
+        data: None,
+    })
 }
 
-pub fn update_last_round<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    _env: &Env,
+pub fn update_last_round(
+    deps: DepsMut,
+    _env: Env,
     new_round: &u64,
 ) -> StdResult<u64> {
-    last_round(&mut deps.storage).save(&new_round)?;
-    Ok(*new_round)
+    let prev_round = LAST_ROUND.load(deps.storage)?;
+    LAST_ROUND.save(deps.storage, &new_round)?;
+
+    Ok(Response {
+        messages: vec![],
+        attributes: vec![
+            attr("action", "update_last_round"),
+            attr("prev_round", prev_round),
+            attr("new_round", new_round),
+        ],
+        events: vec![],
+        data: None,
+    })
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::State {} => to_binary(&query_state(deps)?),
+        QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
         QueryMsg::TotalDeposit {} => to_binary(&query_total_deposit(deps)?),
-        QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
         QueryMsg::TokenContract {
             athlete_id
         } => to_binary(&query_token_address(deps, athlete_id)?),
         QueryMsg::IsTokenMintable {
             athlete_id
         } => to_binary(&query_token_mintable(deps, athlete_id)?),
-        QueryMsg::ContractCount {} => to_binary(&query_contract_count(deps)?),
+        QueryMsg::TokenCount {} => to_binary(&query_token_count(deps)?),
+        QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
     }
 }
 
-fn query_state<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<State> {
-    state_read(&deps.storage).load()
+fn query_contract_info(
+    deps: Deps,
+) -> StdResult<ContractInfoResponse> {
+    CONTRACT_INFO.load(deps.storage)
 }
 
-fn query_total_deposit<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn query_total_deposit(
+    deps: Deps,
 ) -> StdResult<Uint128> {
-    Ok(Uint128(total_deposit_read(&deps.storage).load()? as u128))
+    Ok(Uint128(total_deposit(deps.storage).load()? as u128))
 }
 
-fn query_last_round<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn query_last_round(
+    deps: Deps,
 ) -> StdResult<u64> {
-    Ok(last_round_read(&deps.storage).load()?)
+    LAST_ROUND.load(deps.storage)
 }
 
-fn query_contract_count<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-) -> StdResult<ContractCountResponse> {
-    let count = get_contract_count(&deps.storage)?;
-    Ok(ContractCountResponse { count })
+fn query_token_count(
+    deps: Deps,
+) -> StdResult<TokenCountResponse> {
+    let count = token_count(deps.storage)?;
+    Ok(TokenCountResponse { count })
 }
 
-fn query_token_address<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn query_token_address(
+    deps: Deps,
     athlete_id: String
-) -> StdResult<HumanAddr> {
-    token_addresses_read(&deps.storage).load(athlete_id.as_bytes())
+) -> StdResult<Addr> {
+    token_addresses_read(deps.storage).load(athlete_id.as_bytes())
 }
 
-fn query_token_mintable<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn query_token_mintable(
+    deps: Deps,
     athlete_id: String
 ) -> StdResult<bool> {
-    let token_address = query_token_address(&deps, athlete_id).unwrap();
+    let token_address = query_token_address(deps, athlete_id).unwrap();
 
     // TODO: Query token_address if mintable using the NFT contract's IsMintable{} query
     let msg = QueryMintMsg::IsMintable { rank: "B".to_string() };
@@ -418,14 +425,14 @@ fn query_token_mintable<S: Storage, A: Api, Q: Querier>(
     Ok(is_mintable)
 }
 
-fn query_terrand<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
+fn query_terrand(
+    deps: Deps,
     env: Env,
     count: u128
 ) -> StdResult<Vec<String>> {
     // Load terrand_addr from the state
-    let terrand_addr = query_state(&deps).unwrap().terrand_addr;
-    let last_round = query_last_round(&deps).unwrap();
+    let terrand_addr = query_contract_info(deps).unwrap().terrand_addr;
+    let last_round = query_last_round(deps).unwrap();
     // String length to be returned by terrand should have 3 characters per athlete ID
     let string_len = count * 3;
 
@@ -442,7 +449,7 @@ fn query_terrand<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
     }
 
-    update_last_round(deps, &env, &terrand_res.round)?;
+    update_last_round(deps, env, &terrand_res.round)?;
 
     let n = randomness_hash
         .char_indices()
@@ -462,13 +469,13 @@ fn query_terrand<S: Storage, A: Api, Q: Querier>(
     Ok(hex_list)
 }
 
-fn hex_to_athlete<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
+fn hex_to_athlete(
+    deps: Deps,
     hex_list: Vec<String>
 ) -> StdResult<Vec<u64>> {
 
     // Load contract_count from the state
-    let contract_count = query_contract_count(&deps).unwrap().count;
+    let contract_count = query_token_count(deps).unwrap().count;
 
     let mut athlete_list: Vec<u64> = Vec::new();
 

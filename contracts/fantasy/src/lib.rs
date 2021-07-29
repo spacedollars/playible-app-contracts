@@ -3,6 +3,6 @@ pub mod msg;
 pub mod state;
 pub mod helpers;
 pub mod querier;
+mod error;
 
-#[cfg(all(target_arch = "wasm32", not(feature = "library")))]
-cosmwasm_std::create_entry_points!(contract);
+pub use crate::error::ContractError;

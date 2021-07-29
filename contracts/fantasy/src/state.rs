@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, StdResult, Storage};
 use cosmwasm_storage::{Bucket, ReadonlyBucket};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ContractInfo {
+pub struct ContractInfoResponse {
     /// Stable coin denomination. 
     pub stable_denom: String,
     // anchor contract address for depositing the rewards
@@ -16,7 +16,7 @@ pub struct ContractInfo {
     pub pack_len: u64,
 }
 
-pub const CONTRACT_INFO: Item<ContractInfo> = Item::new("contract_info");
+pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("contract_info");
 pub const TOTAL_DEPOSIT: Item<u64> = Item::new("total_deposit");
 pub const ANCHOR_ADDR: Item<Addr> = Item::new("anchor_addr");
 pub const TERRAND_ADDR: Item<Addr> = Item::new("terrand_addr");
