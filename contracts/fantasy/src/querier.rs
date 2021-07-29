@@ -8,7 +8,7 @@ pub fn compute_tax(
     deps: Deps,
     coin: &Coin,
 ) -> StdResult<Uint128> {
-    let terra_querier = TerraQuerier::new(deps.querier);
+    let terra_querier = TerraQuerier::new(&deps.querier);
     let tax_rate = Decimal256::from((terra_querier.query_tax_rate()?).rate);
     let tax_cap = Uint128::from((terra_querier.query_tax_cap(coin.denom.to_string())?).cap);
     let amount = Uint128::from(coin.amount);
@@ -22,7 +22,7 @@ pub fn compute_price_with_tax(
     deps: Deps,
     coin: &Coin,
 ) -> StdResult<Uint128> {
-    let terra_querier = TerraQuerier::new(deps.querier);
+    let terra_querier = TerraQuerier::new(&deps.querier);
     let tax_rate = Decimal256::from((terra_querier.query_tax_rate()?).rate);
     let tax_cap = Uint128::from((terra_querier.query_tax_cap(coin.denom.to_string())?).cap);
     let amount = Uint128::from(coin.amount);
@@ -39,7 +39,7 @@ pub fn deduct_tax(
     let tax_amount = compute_tax(deps, &coin).unwrap_or(Uint128::zero());
     Ok(Coin {
         denom: coin.denom,
-        amount: (Uint128::from(coin.amount) - tax_amount)?,
+        amount: Uint128::from(coin.amount) - tax_amount,
     })
 }
 

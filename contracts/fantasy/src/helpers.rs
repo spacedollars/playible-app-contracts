@@ -19,9 +19,9 @@ pub fn encode_msg_execute(
     coin: Vec<Coin>,
 ) -> StdResult<CosmosMsg> {
     Ok(WasmMsg::Execute {
-        contract_addr: address,
+        contract_addr: address.to_string(),
         msg: msg,
-        send: coin,
+        funds: coin,
     }
     .into())
 }
@@ -32,14 +32,14 @@ pub fn encode_raw_query(
     address: Addr
 ) -> StdResult<Binary> {
     Ok(deps.querier.query(&QueryRequest::Wasm(WasmQuery::Raw {
-        contract_addr: address,
+        contract_addr: address.to_string(),
         key: key,
     }))?)
 }
 
 pub fn encode_msg_query(msg: Binary, address: Addr) -> StdResult<QueryRequest<Empty>> {
     Ok(WasmQuery::Smart {
-        contract_addr: address,
+        contract_addr: address.to_string(),
         msg: msg,
     }
     .into())

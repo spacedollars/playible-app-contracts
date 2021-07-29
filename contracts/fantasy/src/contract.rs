@@ -17,7 +17,8 @@ use crate::msg::{
     LatestRandomResponse, ConfigResponse, StateResponse,
 };
 use crate::state::{
-    CONTRACT_INFO, LAST_ROUND, ContractInfoResponse,
+    ContractInfoResponse,
+    CONTRACT_INFO, TOTAL_DEPOSIT, TOKEN_COUNT, LAST_ROUND, 
     total_deposit, increase_deposit, decrease_deposit,
     token_count, increment_token_count,
     token_addresses, token_addresses_read,
@@ -39,13 +40,16 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let anchor_contract = deps.api.addr_validate(&msg.anchor_addr)?;
+    let terrand_contract = deps.api.addr_validate(&msg.terrand_addr)?;
 
     let info = ContractInfoResponse {
         stable_denom: msg.stable_denom,
-        anchor_addr: msg.anchor_addr,
-        terrand_addr: msg.terrand_addr,
+        anchor_addr: anchor_contract,
+        terrand_addr: terrand_contract,
         pack_len: msg.pack_len,
     };
 
@@ -60,9 +64,9 @@ pub fn instantiate(
     };
 
     CONTRACT_INFO.save(deps.storage, &info)?;
+    TOTAL_DEPOSIT.save(deps.storage, &0)?;
+    TOKEN_COUNT.save(deps.storage, &0)?;
     LAST_ROUND.save(deps.storage, &0)?;
-    total_deposit(deps.storage).save(&0)?;
-    token_count(deps.storage).save(&0)?;
     
     Ok(Response::default())
 }
@@ -133,9 +137,9 @@ pub fn execute_purchase(
 
     // Generate the list of athlete IDs to be minted
     //let hex_list = query_terrand(deps, env, pack_len).unwrap();
-    let hex_list = match query_terrand(deps.as_ref(), env, pack_len) {
+    let hex_list = match query_terrand(deps, env, pack_len) {
         Ok(list) => list,
-        Err(error) => return Err(error),
+        Err(error) => return Err(ContractError::Std(error)),
     };
     let mint_index_list = hex_to_athlete(deps.as_ref(), hex_list.clone()).unwrap();
 
@@ -146,7 +150,7 @@ pub fn execute_purchase(
         //TODO: Handle error from query_token_address. Ensure that the generated token ids are a subset of the token addresses
         
         let mint_msg = TokenMsg::Mint {
-            owner: sender.clone(),
+            owner: sender.clone().to_string(),
             rank: "B".to_string(),
         };
 
@@ -179,9 +183,8 @@ pub fn execute_deposit(
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
 
-    let deposit_amount: Uint128 = env
-        .message
-        .sent_funds
+    let deposit_amount: Uint128 = info
+        .funds
         .iter()
         .find(|c| c.denom == "uusd")
         .map(|c| Uint128::from(c.amount))
@@ -189,30 +192,31 @@ pub fn execute_deposit(
     
     // coin deposit minus tax
     let coin_deposit = deduct_tax(
-        deps, 
+        deps.as_ref(), 
         Coin {
             denom: "uusd".to_string(),
             amount: deposit_amount
         }
     )?;
-    let contract = query_contract_info(deps.as_ref()).unwrap().anchor_addr;
+
+    let anchor_contract = query_contract_info(deps.as_ref()).unwrap().anchor_addr;
     
     // execute anchor's deposit stable contract
     let deposit_msg = to_binary(&AnchorMsg::DepositStable{})?;
     let anchor_res = encode_msg_execute(
         deposit_msg,
-        contract.clone(),
+        anchor_contract.clone(),
         vec![coin_deposit.clone()]
     )?;
 
-    increase_deposit(deps, coin_deposit.amount.u128() as u64)?;
+    increase_deposit(deps.storage, coin_deposit.amount.u128() as u64)?;
     
     Ok(Response {
         messages: vec![anchor_res],
         attributes: vec![
             attr("action", "deposit"),
             attr("from", &sender),
-            attr("to", &contract),
+            attr("to", &anchor_contract),
             attr("deposit_amount", &coin_deposit.amount),
         ],
         events: vec![],
@@ -231,7 +235,7 @@ pub fn execute_redeem(
 
      // get exchange rate from anchor state
      let state_bin: Binary = encode_raw_query(
-        deps, 
+        deps.as_ref(), 
         Binary::from(to_length_prefixed(b"state")),
         anchor_contract.clone(),
     )?;
@@ -245,19 +249,19 @@ pub fn execute_redeem(
 
     // get anchor usd (aust) contract address from anchor config
     let config_bin: Binary = encode_raw_query(
-        deps,
+        deps.as_ref(),
         Binary::from(to_length_prefixed(b"config")),
         anchor_contract.clone(),
     )?;
 
     // transform binary response to state response
     let config_response: ConfigResponse = from_binary(&config_bin)?;
-    let aterra_contract = deps.api.human_address(&config_response.aterra_contract)?;
+    let aterra_contract = deps.api.addr_validate(&config_response.aterra_contract.to_string())?;
 
     // create a send message
     let msg = to_binary(&Cw20ExecuteMsg::Send{
         amount: aust_amount,
-        contract: anchor_contract,
+        contract: anchor_contract.to_string(),
         msg: Some(contract_msg)
     })?;
 
@@ -284,14 +288,15 @@ pub fn execute_redeem(
 pub fn execute_add_token(
     deps: DepsMut,
     _env: Env,
-    tokens: Vec<Addr>,
+    tokens: Vec<String>,
 ) -> Result<Response, ContractError> {
 
     for token in tokens.iter() {
+        let token_addr = deps.api.addr_validate(&token)?;
         let athlete_id = query_token_count(deps.as_ref()).unwrap();
         token_addresses(deps.storage).update(&athlete_id.to_string().as_bytes(), |old| match old {
             Some(_) => Err(ContractError::Claimed {}),
-            None => Ok(token.clone()),
+            None => Ok(token_addr.clone()),
         })?;
         
         increment_token_count(deps.storage)?;
@@ -310,9 +315,10 @@ pub fn execute_add_token(
 pub fn execute_token_turnover(
     deps: DepsMut,
     _env: Env,
-    new_contract: Addr,
+    new_contract: String,
 ) -> Result<Response, ContractError> {
 
+    let new_address = deps.api.addr_validate(&new_contract)?;
     let token_count = query_token_count(deps.as_ref()).unwrap();
     let mut token_responses = vec![];
 
@@ -320,7 +326,7 @@ pub fn execute_token_turnover(
         let contract_addr = query_token_address(deps.as_ref(), athlete_id.to_string()).unwrap();
 
         let update_msg = TokenMsg::UpdateMinter {
-            minter: new_contract.clone(),
+            minter: new_address.clone().to_string(),
         };
 
         let token_res = encode_msg_execute(
@@ -348,19 +354,8 @@ pub fn update_last_round(
     _env: Env,
     new_round: &u64,
 ) -> StdResult<u64> {
-    let prev_round = LAST_ROUND.load(deps.storage)?;
     LAST_ROUND.save(deps.storage, &new_round)?;
-
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "update_last_round"),
-            attr("prev_round", prev_round),
-            attr("new_round", new_round),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(*new_round)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -388,19 +383,19 @@ fn query_contract_info(
 fn query_total_deposit(
     deps: Deps,
 ) -> StdResult<Uint128> {
-    Ok(Uint128::From(total_deposit(deps.storage).load()?))
+    Ok(Uint128::from(total_deposit(deps.storage)?))
+}
+
+fn query_token_count(
+    deps: Deps,
+) -> StdResult<u64> {
+    TOKEN_COUNT.load(deps.storage)
 }
 
 fn query_last_round(
     deps: Deps,
 ) -> StdResult<u64> {
     LAST_ROUND.load(deps.storage)
-}
-
-fn query_token_count(
-    deps: Deps,
-) -> StdResult<u64> {
-    Ok(token_count(deps.storage)?)
 }
 
 fn query_token_address(
@@ -419,7 +414,7 @@ fn query_token_mintable(
     // TODO: Query token_address if mintable using the NFT contract's IsMintable{} query
     let msg = TokenMsg::IsMintable { rank: "B".to_string() };
     let wasm = WasmQuery::Smart {
-        contract_addr: token_address,
+        contract_addr: token_address.to_string(),
         msg: to_binary(&msg)?,
     };
     let is_mintable: bool = deps.querier.query(&wasm.into())?;
@@ -428,13 +423,13 @@ fn query_token_mintable(
 }
 
 fn query_terrand(
-    deps: Deps,
+    deps: DepsMut,
     env: Env,
     count: u64
 ) -> StdResult<Vec<String>> {
     // Load terrand_addr from the state
-    let terrand_addr = query_contract_info(deps).unwrap().terrand_addr;
-    let last_round = query_last_round(deps).unwrap();
+    let terrand_addr = query_contract_info(deps.as_ref()).unwrap().terrand_addr;
+    let last_round = query_last_round(deps.as_ref()).unwrap();
     // String length to be returned by terrand should have 3 characters per athlete ID
     let string_len = count * 3;
 
@@ -448,7 +443,7 @@ fn query_terrand(
     let randomness_hash = hex::encode(terrand_res.randomness.as_slice());
 
     if terrand_res.round <= last_round {
-        return Err(ContractError::UsedRound {});
+        return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
     }
 
     update_last_round(deps, env, &terrand_res.round)?;
@@ -477,7 +472,7 @@ fn hex_to_athlete(
 ) -> StdResult<Vec<u64>> {
 
     // Load contract_count from the state
-    let token_count = query_token_count(deps).unwrap().count;
+    let token_count = query_token_count(deps).unwrap();
 
     let mut athlete_list: Vec<u64> = Vec::new();
 

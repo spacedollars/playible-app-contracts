@@ -10,9 +10,9 @@ pub struct ContractInfoResponse {
     /// Stable coin denomination. 
     pub stable_denom: String,
     // anchor contract address for depositing the rewards
-    pub anchor_addr: String,
+    pub anchor_addr: Addr,
     // terrand contract address for calling Oracle's DRand
-    pub terrand_addr: String,
+    pub terrand_addr: Addr,
     /// number of NFT players to be pulled per pack
     pub pack_len: u64,
 }
@@ -52,10 +52,10 @@ pub fn increment_token_count(storage: &mut dyn Storage) -> StdResult<u64> {
     Ok(val)
 }
 
-pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<S, Addr> {
-    bucket(TOKEN_ADDRESSES_PREFIX, storage)
+pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<Addr> {
+    bucket(storage, TOKEN_ADDRESSES_PREFIX)
 }
 
-pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<S, Addr> {
-    bucket_read(TOKEN_ADDRESSES_PREFIX, storage)
+pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<Addr> {
+    bucket_read(storage, TOKEN_ADDRESSES_PREFIX)
 }

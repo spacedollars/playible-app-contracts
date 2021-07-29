@@ -62,13 +62,13 @@ checksum = "9f6b64db6932c7e49332728e3a6bd82c6b7e16016607d20923b537c3bc4c0d5f"
 
 [[package]]
 name = "cosmwasm-bignumber"
-version = "1.0.0"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef9f9dd6522baab191620bc7505f28992bb7cd3394635bca20301d93eed5af4f"
+checksum = "ede44333758d24b2bcdeda08d8b3b9ddd8ea22d8e9b045a12a3bfeb1dbfdea06"
 dependencies = [
  "bigint",
- "cosmwasm-std 0.10.1",
- "schemars 0.7.6",
+ "cosmwasm-std 0.15.2",
+ "schemars 0.8.3",
  "serde",
 ]
 
