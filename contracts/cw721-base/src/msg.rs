@@ -55,7 +55,10 @@ pub enum ExecuteMsg {
     },
     /// Remove previously granted ApproveAll permission
     RevokeAll { operator: String },
-    /// Converts Base NFTs to Silver Rank
+    /// Mint a new NFT, can only be called by the contract minter
+    Mint(MintMsg),
+
+    /// Exchanges NFTs for a higher token
     UpgradeToken {
         /// Desired rank to upgrade to
         rank: String,
@@ -67,16 +70,11 @@ pub enum ExecuteMsg {
         /// Address of the new minter
         minter: String,
     },
-
-    /// Mint a new NFT, can only be called by the contract minter
-    Mint(MintMsg),
-
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
     LockToken {
         /// Unique ID of the NFT
         token_id: String,
     },
-
     /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
     UnlockToken {
         /// Unique ID of the NFT
@@ -102,6 +100,7 @@ pub enum QueryMsg {
         /// unset or false will filter out expired approvals, you must set to true to see them
         include_expired: Option<bool>,
     },
+
     /// List all operators that can access all of the owner's tokens
     /// Return type: `ApprovedForAllResponse`
     ApprovedForAll {
@@ -115,12 +114,14 @@ pub enum QueryMsg {
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
     ContractInfo {},
+
     /// With MetaData Extension.
     /// Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema*
     /// but directly from the contract: `NftInfoResponse`
     NftInfo {
         token_id: String,
     },
+
     /// With MetaData Extension.
     /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
     /// for clients: `AllNftInfo`
@@ -132,50 +133,34 @@ pub enum QueryMsg {
 
     /// Total number of tokens issued
     BaseTokens {},
+    SilverTokens {},
+    GoldTokens{},
+
     /// With Enumerable extension.
     /// Returns all tokens owned by the given address, [] if unset.
     /// Return type: TokensResponse.
-    OwnerBaseTokens {
+    Tokens {
         owner: String,
         start_after: Option<String>,
         limit: Option<u32>,
     },
+
     /// With Enumerable extension.
     /// Requires pagination. Lists all token_ids controlled by the contract.
     /// Return type: TokensResponse.
-    AllBaseTokens {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
-
-    SilverTokens {},
-    OwnerSilverTokens {
-        owner: String,
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
-    AllSilverTokens {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
-
-    GoldTokens {}, 
-    OwnerGoldTokens {
-        owner: String,
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
-    AllGoldTokens {
+    AllTokens {
         start_after: Option<String>,
         limit: Option<u32>,
     },
 
     // Return the minter
     Minter {},
+
     /// Returns a boolean determining if the token is mintable
     IsMintable {
         rank: String,
     },
+
     /// Checks if a locked NFT can be unlocked
     CanUnlockToken {
         token_id: String,
