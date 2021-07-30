@@ -36,7 +36,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -54,7 +54,7 @@ pub fn instantiate(
     };
 
     match msg.tokens {
-        Some(m) => execute_add_token(deps, env, m)?,
+        Some(m) => execute_add_token(deps.branch(), env, m)?,
         None => Response {
             messages: vec![],
             attributes: vec![],
@@ -63,10 +63,10 @@ pub fn instantiate(
         },
     };
 
-    CONTRACT_INFO.save(deps.storage, &info)?;
-    TOTAL_DEPOSIT.save(deps.storage, &0)?;
-    TOKEN_COUNT.save(deps.storage, &0)?;
-    LAST_ROUND.save(deps.storage, &0)?;
+    CONTRACT_INFO.save(deps.branch().storage, &info)?;
+    TOTAL_DEPOSIT.save(deps.branch().storage, &0)?;
+    TOKEN_COUNT.save(deps.branch().storage, &0)?;
+    LAST_ROUND.save(deps.branch().storage, &0)?;
     
     Ok(Response::default())
 }
@@ -112,14 +112,14 @@ pub fn execute_test(
 }
 
 pub fn execute_purchase(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo, 
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
 
     // TODO: Generate N token ids based on the pack_len using Terrand
-    let mut mint_responses = vec![];
+    let mut response = Response::new();
 
     // Load pack_len from the state
     let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
@@ -136,16 +136,16 @@ pub fn execute_purchase(
     }
 
     // Generate the list of athlete IDs to be minted
-    //let hex_list = query_terrand(deps, env, pack_len).unwrap();
-    let hex_list = match query_terrand(deps, env, pack_len) {
+    // let hex_list = query_terrand(deps, env, pack_len).unwrap();
+    let hex_list = match query_terrand(deps.branch(), env, pack_len) {
         Ok(list) => list,
         Err(error) => return Err(ContractError::Std(error)),
     };
-    let mint_index_list = hex_to_athlete(deps.as_ref(), hex_list.clone()).unwrap();
+    let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
 
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
-        let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+        let token_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
 
         //TODO: Handle error from query_token_address. Ensure that the generated token ids are a subset of the token addresses
         
@@ -162,23 +162,18 @@ pub fn execute_purchase(
 
         // TODO: handle error from mint_res
 
-        mint_responses.push(mint_res);
+        response.add_message(mint_res);
     }
+
+    response.add_attribute("action", "purchase");
+    response.add_attribute("from", &sender);
     
-    Ok(Response {
-        messages: mint_responses,
-        attributes: vec![
-            attr("action", "purchase"),
-            attr("from", &sender),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn execute_deposit(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
@@ -203,30 +198,27 @@ pub fn execute_deposit(
     
     // execute anchor's deposit stable contract
     let deposit_msg = to_binary(&AnchorMsg::DepositStable{})?;
-    let anchor_res = encode_msg_execute(
+    let anchor_response = encode_msg_execute(
         deposit_msg,
         anchor_contract.clone(),
         vec![coin_deposit.clone()]
     )?;
 
     increase_deposit(deps.storage, coin_deposit.amount.u128() as u64)?;
+
+    let mut response = Response::new();
+    response.add_message(anchor_response);
+    response.add_attribute("action", "deposit");
+    response.add_attribute("from", &sender);
+    response.add_attribute("to", &anchor_contract);
+    response.add_attribute("deposit_amount", &coin_deposit.amount.to_string());
     
-    Ok(Response {
-        messages: vec![anchor_res],
-        attributes: vec![
-            attr("action", "deposit"),
-            attr("from", &sender),
-            attr("to", &anchor_contract),
-            attr("deposit_amount", &coin_deposit.amount),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(response)
 }
 
 pub fn execute_redeem(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
@@ -262,7 +254,7 @@ pub fn execute_redeem(
     let msg = to_binary(&Cw20ExecuteMsg::Send{
         amount: aust_amount,
         contract: anchor_contract.to_string(),
-        msg: Some(contract_msg)
+        msg: contract_msg
     })?;
 
     let anchor_response = encode_msg_execute(
@@ -271,18 +263,15 @@ pub fn execute_redeem(
         vec![]
     )?;
 
-    Ok(Response {
-        messages: vec![anchor_response],
-        attributes: vec![
-            attr("action", "receive"),
-            attr("from", &sender),
-            attr("to", &anchor_contract),
-            attr("amount", &amount),
-            attr("aust_amount", &aust_amount),
-        ],
-        events: vec![],
-        data: None,
-    })
+    let mut response = Response::new();
+    response.add_message(anchor_response);
+    response.add_attribute("action", "receive");
+    response.add_attribute("from", &sender);
+    response.add_attribute("to", &anchor_contract);
+    response.add_attribute("amount", &amount.to_string());
+    response.add_attribute("aust_amount", &aust_amount.to_string());
+
+    Ok(response)
 }
 
 pub fn execute_add_token(
@@ -314,13 +303,13 @@ pub fn execute_add_token(
 
 pub fn execute_token_turnover(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     new_contract: String,
 ) -> Result<Response, ContractError> {
+    let mut response = Response::new();
 
     let new_address = deps.api.addr_validate(&new_contract)?;
     let token_count = query_token_count(deps.as_ref()).unwrap();
-    let mut token_responses = vec![];
 
     for athlete_id in 0..token_count {
         let contract_addr = query_token_address(deps.as_ref(), athlete_id.to_string()).unwrap();
@@ -336,17 +325,14 @@ pub fn execute_token_turnover(
         )?;
 
         // TODO: handle error from token_res
-        token_responses.push(token_res);
+        response.add_message(token_res);
     }
     
-    Ok(Response {
-        messages: token_responses,
-        attributes: vec![
-            attr("action", "token_turnover"),
-        ],
-        events: vec![],
-        data: None,
-    })
+    response.add_attribute("action", "token_turnover");
+    response.add_attribute("from", &env.contract.address);
+    response.add_attribute("to", &new_address.to_string());
+
+    Ok(response)
 }
 
 pub fn update_last_round(
@@ -359,7 +345,7 @@ pub fn update_last_round(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
         QueryMsg::TotalDeposit {} => to_binary(&query_total_deposit(deps)?),
@@ -389,7 +375,7 @@ fn query_total_deposit(
 fn query_token_count(
     deps: Deps,
 ) -> StdResult<u64> {
-    TOKEN_COUNT.load(deps.storage)
+    Ok(token_count(deps.storage)?)
 }
 
 fn query_last_round(
@@ -411,7 +397,7 @@ fn query_token_mintable(
 ) -> StdResult<bool> {
     let token_address = query_token_address(deps, athlete_id).unwrap();
 
-    // TODO: Query token_address if mintable using the NFT contract's IsMintable{} query
+    // Query token_address if mintable using the NFT contract's IsMintable{} query
     let msg = TokenMsg::IsMintable { rank: "B".to_string() };
     let wasm = WasmQuery::Smart {
         contract_addr: token_address.to_string(),
