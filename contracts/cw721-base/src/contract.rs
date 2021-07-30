@@ -609,30 +609,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
         )?),
         QueryMsg::BaseTokens {} => to_binary(&query_num_tokens(deps, "B".to_string())?),
-        QueryMsg::OwnerBaseTokens {
-            owner,
-            start_after,
-            limit,
-        } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
-        QueryMsg::AllBaseTokens { start_after, limit } => {
-            to_binary(&query_all_tokens(deps, start_after, limit)?)
-        },
         QueryMsg::SilverTokens {} => to_binary(&query_num_tokens(deps, "S".to_string())?),
-        QueryMsg::OwnerSilverTokens {
-            owner,
-            start_after,
-            limit,
-        } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
-        QueryMsg::AllSilverTokens { start_after, limit } => {
-            to_binary(&query_all_tokens(deps, start_after, limit)?)
-        },
         QueryMsg::GoldTokens {} => to_binary(&query_num_tokens(deps, "G".to_string())?),
-        QueryMsg::OwnerGoldTokens {
+        QueryMsg::Tokens {
             owner,
             start_after,
             limit,
         } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
-        QueryMsg::AllGoldTokens { start_after, limit } => {
+        QueryMsg::AllTokens { start_after, limit } => {
             to_binary(&query_all_tokens(deps, start_after, limit)?)
         },
         QueryMsg::IsMintable { rank } => to_binary(&query_mintable(deps, rank)?),
