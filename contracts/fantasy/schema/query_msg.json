@@ -3,77 +3,7 @@
   "title": "QueryMsg",
   "anyOf": [
     {
-      "description": "Return the owner of the given token, error if token does not exist Return type: OwnerOfResponse",
-      "type": "object",
-      "required": [
-        "owner_of"
-      ],
-      "properties": {
-        "owner_of": {
-          "type": "object",
-          "required": [
-            "token_id"
-          ],
-          "properties": {
-            "token_id": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "List all operators that can access all of the owner's tokens Return type: `ApprovedForAllResponse`",
-      "type": "object",
-      "required": [
-        "approved_for_all"
-      ],
-      "properties": {
-        "approved_for_all": {
-          "type": "object",
-          "required": [
-            "owner"
-          ],
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "owner": {
-              "$ref": "#/definitions/HumanAddr"
-            },
-            "start_after": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/HumanAddr"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "Total number of tokens issued",
-      "type": "object",
-      "required": [
-        "num_tokens"
-      ],
-      "properties": {
-        "num_tokens": {
-          "type": "object"
-        }
-      }
-    },
-    {
-      "description": "With MetaData Extension. Returns top-level metadata about the contract: `ContractInfoResponse`",
+      "description": "Returns top-level metadata about the contract: `ContractInfoResponse`",
       "type": "object",
       "required": [
         "contract_info"
@@ -82,91 +12,89 @@
         "contract_info": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
-      "description": "With MetaData Extension. Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema* but directly from the contract: `NftInfoResponse`",
+      "description": "Returns the contract address of the corresponding token id",
       "type": "object",
       "required": [
-        "nft_info"
+        "token_contract"
       ],
       "properties": {
-        "nft_info": {
+        "token_contract": {
           "type": "object",
           "required": [
-            "token_id"
+            "athlete_id"
           ],
           "properties": {
-            "token_id": {
+            "athlete_id": {
               "type": "string"
             }
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
-      "description": "With MetaData Extension. Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization for clients: `AllNftInfo`",
+      "description": "Returns the total deposited stable coin amount to Anchor",
       "type": "object",
       "required": [
-        "all_nft_info"
+        "total_deposit"
       ],
       "properties": {
-        "all_nft_info": {
-          "type": "object",
-          "required": [
-            "token_id"
-          ],
-          "properties": {
-            "token_id": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "With Enumerable extension. Requires pagination. Lists all token_ids controlled by the contract. Return type: TokensResponse.",
-      "type": "object",
-      "required": [
-        "all_tokens"
-      ],
-      "properties": {
-        "all_tokens": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "minter"
-      ],
-      "properties": {
-        "minter": {
+        "total_deposit": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Returns a boolean if the token is mintable using the Athlete Contract's IsMintable{} Query",
+      "type": "object",
+      "required": [
+        "is_token_mintable"
+      ],
+      "properties": {
+        "is_token_mintable": {
+          "type": "object",
+          "required": [
+            "athlete_id"
+          ],
+          "properties": {
+            "athlete_id": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Returns the total number of Athlete Contracts saved ",
+      "type": "object",
+      "required": [
+        "token_count"
+      ],
+      "properties": {
+        "token_count": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Returns the last round used in Terrand",
+      "type": "object",
+      "required": [
+        "last_round"
+      ],
+      "properties": {
+        "last_round": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     }
-  ],
-  "definitions": {
-    "HumanAddr": {
-      "type": "string"
-    }
-  }
+  ]
 }
