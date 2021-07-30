@@ -60,6 +60,7 @@ pub enum QueryMsg {
     },
     /// Returns the total number of Athlete Contracts saved 
     TokenCount {},
+    /// Returns the last round used for Terrand
     LastRound {},
 }
 
