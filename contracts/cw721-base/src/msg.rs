@@ -55,7 +55,10 @@ pub enum ExecuteMsg {
     },
     /// Remove previously granted ApproveAll permission
     RevokeAll { operator: String },
-    /// Converts Base NFTs to Silver Rank
+    /// Mint a new NFT, can only be called by the contract minter
+    Mint(MintMsg),
+
+    /// Exchanges NFTs for a higher token
     UpgradeToken {
         /// Desired rank to upgrade to
         rank: String,
@@ -67,16 +70,11 @@ pub enum ExecuteMsg {
         /// Address of the new minter
         minter: String,
     },
-
-    /// Mint a new NFT, can only be called by the contract minter
-    Mint(MintMsg),
-
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
     LockToken {
         /// Unique ID of the NFT
         token_id: String,
     },
-
     /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
     UnlockToken {
         /// Unique ID of the NFT

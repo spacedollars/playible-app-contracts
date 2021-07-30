@@ -73,13 +73,39 @@
       "additionalProperties": false
     },
     {
-      "description": "Total number of tokens issued",
+      "description": "Total number of base tokens issued",
       "type": "object",
       "required": [
-        "num_tokens"
+        "base_tokens"
       ],
       "properties": {
-        "num_tokens": {
+        "base_tokens": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Total number of silver tokens issued",
+      "type": "object",
+      "required": [
+        "silver_tokens"
+      ],
+      "properties": {
+        "silver_tokens": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Total number of gold tokens issued",
+      "type": "object",
+      "required": [
+        "gold_tokens"
+      ],
+      "properties": {
+        "gold_tokens": {
           "type": "object"
         }
       },
@@ -219,6 +245,47 @@
       "properties": {
         "minter": {
           "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Returns a boolean determining if the token is mintable",
+      "type": "object",
+      "required": [
+        "is_mintable"
+      ],
+      "properties": {
+        "is_mintable": {
+          "type": "object",
+          "required": [
+            "rank"
+          ],
+          "properties": {
+            "rank": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },{
+      "description": "Checks if a locked NFT can be unlocked",
+      "type": "object",
+      "required": [
+        "can_unlock_token"
+      ],
+      "properties": {
+        "can_unlock_token": {
+          "type": "object",
+          "required": [
+            "token_id"
+          ],
+          "properties": {
+            "token_id": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
