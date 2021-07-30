@@ -251,7 +251,7 @@ pub fn execute_lock_token(
 
 pub fn execute_unlock_token(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     token_id: String,
 ) -> Result<Response, ContractError> {

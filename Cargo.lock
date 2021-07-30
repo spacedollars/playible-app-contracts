@@ -7,6 +7,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bigint"
+version = "4.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0e8c8a600052b52482eff2cf4d810e462fdff1f656ac1ecb6232132a1ed7def"
+dependencies = [
+ "byteorder",
+ "crunchy 0.1.6",
+]
+
+[[package]]
 name = "bitvec"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -45,10 +55,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f6b64db6932c7e49332728e3a6bd82c6b7e16016607d20923b537c3bc4c0d5f"
 
 [[package]]
-name = "cosmwasm-crypto"
-version = "0.15.0"
+name = "cosmwasm-bignumber"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf6ae19e862fefda01c0747fb67ce5b454646f71574e24e15732f0250ca73ee2"
+checksum = "ede44333758d24b2bcdeda08d8b3b9ddd8ea22d8e9b045a12a3bfeb1dbfdea06"
+dependencies = [
+ "bigint",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cosmwasm-crypto"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0bda54a90e2c523ca4b714c285adb54c326253db88f044862a03d049b569fda"
 dependencies = [
  "digest",
  "ed25519-zebra",
@@ -59,9 +81,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "0.15.0"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5e2d4aa77ba390c517ef0ae98b5fbf78007b3c2ba672707eab8f5165eaee522"
+checksum = "72a75b12aee6d4b38c5da26bdcdccc22d7730e6ac7edf194ecfde1f782b9d568"
 dependencies = [
  "syn",
 ]
@@ -88,9 +110,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "0.15.0"
+version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4654fd56ea9d24d595de9cb54e0c9837223cb3b8f3462974e51e2741489b59d8"
+checksum = "b234bd12486326fef39a2d7bce098cf8a26c96c4f17181d937c131b84892a013"
 dependencies = [
  "base64",
  "cosmwasm-crypto",
@@ -103,6 +125,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-storage"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a256b40efc34769435e328b531e2440327305090a19f4bd2194d374b0986db6f"
+dependencies = [
+ "cosmwasm-std",
+ "serde",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -110,6 +142,12 @@ checksum = "66c99696f6c9dd7f35d486b9d04d7e6e202aa3e8c40d553f2fdf5e7e0c6a71ef"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "crunchy"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2f4a431c5c9f662e1200b7c7f02c34e91361150e382089a8f2dec3ba680cbda"
 
 [[package]]
 name = "crunchy"
@@ -287,6 +325,24 @@ dependencies = [
  "rand_core",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "fantasy"
+version = "0.7.0"
+dependencies = [
+ "cosmwasm-bignumber",
+ "cosmwasm-schema 0.15.0",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "hex",
+ "schemars",
+ "serde",
+ "terra-cosmwasm",
+ "thiserror",
 ]
 
 [[package]]
@@ -554,6 +610,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "terra-cosmwasm"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10b671bd693e49c7c47b4e0f441bddf922a89add3c8affa6740657dca5be4ca3"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -586,7 +653,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e11fe9a9348741cf134085ad57c249508345fe16411b3d7fb4ff2da2f1d6382e"
 dependencies = [
  "byteorder",
- "crunchy",
+ "crunchy 0.2.2",
  "hex",
  "static_assertions",
 ]
