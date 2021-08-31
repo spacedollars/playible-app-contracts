@@ -88,6 +88,10 @@ pub struct MintMsg {
     pub owner: String,
     /// Describes the rank of the NFT 
     pub rank: String,
+    /// Describes the type of minting to be used
+    pub mint_type: String,
+    /// last_round used for minting
+    pub last_round: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -171,4 +175,15 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct MinterResponse {
     pub minter: String,
+}
+
+/// Fantasy Contract Message
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum FantasyMsg {
+    /// Add minted token to purchased list
+    AddPurchasedToken {
+        last_round: String,
+        token_id: String,
+    },
 }
