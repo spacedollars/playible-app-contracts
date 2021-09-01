@@ -13,7 +13,7 @@ use cw721::{
 };
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MintMsg, MinterResponse, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MintMsg, MinterResponse, QueryMsg, FantasyMsg};
 use crate::state::{
     tokens, Approval, TokenInfo, CONTRACT_INFO, MINTER, OPERATORS,
     increment_base_tokens, base_tokens, 
@@ -21,6 +21,10 @@ use crate::state::{
     increment_gold_tokens, gold_tokens, 
 };
 use cw_storage_plus::Bound;
+
+use crate::helpers::{
+    encode_msg_execute,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw721-base";
@@ -142,17 +146,29 @@ pub fn execute_mint(
         increment_base_tokens(deps.storage)?;
     }
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "mint"),
-            attr("minter", info.sender),
-            attr("token_id", token_id),
-            attr("rank", rank_copy_3),
-        ],
-        events: vec![],
-        data: None,
-    })
+    let mut response = Response::new();
+
+    if msg.mint_type.eq("pack"){       
+        let fantasy_msg = FantasyMsg::AddPurchasedToken {
+            last_round: msg.last_round.clone().unwrap(),
+            token_id: token_id.clone(),
+        };
+
+        let fantasy_res = encode_msg_execute(
+            to_binary(&fantasy_msg).unwrap(),
+            minter,
+            vec![]
+        )?;
+
+        response.add_message(fantasy_res);
+    }
+
+    response.add_attribute("action", "mint");
+    response.add_attribute("minter", info.sender);
+    response.add_attribute("token_id", token_id);
+    response.add_attribute("rank", rank_copy_3);
+
+    Ok(response)
 }
 
 pub fn execute_update_minter(
@@ -199,7 +215,9 @@ pub fn execute_upgrade_token(
     // create msg for minting
     let mint_msg = MintMsg {
         owner: info.sender.to_string(), 
-        rank: rank.clone()
+        rank: rank.clone(),
+        mint_type: "upgrade".into(),
+        last_round: None,
     };
 
     // Have the contract execute the mint function

@@ -22,6 +22,7 @@ use crate::state::{
     total_deposit, increase_deposit, decrease_deposit,
     token_count, increment_token_count,
     token_addresses, token_addresses_read,
+    purchased_pack, purchased_pack_read
 };
 use crate::helpers::{
     encode_msg_execute,
@@ -87,6 +88,10 @@ pub fn execute(
         ExecuteMsg::AddToken {
             tokens
         } => execute_add_token(deps, env, tokens),
+        ExecuteMsg::AddPurchasedToken {
+            last_round,
+            token_id
+        } => execute_add_purchased_token(deps, env, last_round, token_id),
         ExecuteMsg::TokenTurnover {
             new_contract
         } => execute_token_turnover(deps, env, new_contract),
@@ -142,6 +147,7 @@ pub fn execute_purchase(
         Err(error) => return Err(ContractError::Std(error)),
     };
     let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
+    let last_round = query_last_round(deps.branch().as_ref()).unwrap();
 
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
@@ -152,6 +158,8 @@ pub fn execute_purchase(
         let mint_msg = TokenMsg::Mint {
             owner: sender.clone().to_string(),
             rank: "B".to_string(),
+            mint_type: "pack".to_string(),
+            last_round: Some(last_round.to_string()),
         };
 
         let mint_res = encode_msg_execute(
@@ -283,7 +291,8 @@ pub fn execute_add_token(
     for token in tokens.iter() {
         let token_addr = deps.api.addr_validate(&token)?;
         let athlete_id = query_token_count(deps.as_ref()).unwrap();
-        token_addresses(deps.storage).update(&athlete_id.to_string().as_bytes(), |old| match old {
+
+        token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
             Some(_) => Err(ContractError::Claimed {}),
             None => Ok(token_addr.clone()),
         })?;
@@ -295,6 +304,41 @@ pub fn execute_add_token(
         messages: vec![],
         attributes: vec![
             attr("action", "add_token"),
+        ],
+        events: vec![],
+        data: None,
+    })
+}
+
+pub fn execute_add_purchased_token(
+    deps: DepsMut,
+    _env: Env,
+    last_round: String,
+    token_id: String,
+) -> Result<Response, ContractError> { 
+
+    let mut pack = query_purchased_pack(deps.as_ref(), last_round.clone())?.unwrap_or_default();
+ 
+    purchased_pack(deps.storage).update::<_, ContractError>(&last_round.as_bytes(), |old| match old {
+        // If last_round key exists within the storage
+        Some(_) => {
+            // Load purchased_pack then push the new token_ids
+            pack.push(token_id);
+            Ok(pack)
+        },
+        // If last_round key has not been used  
+        None => {
+            // Create new Vec<String> and then assign to key
+            let mut new_pack: Vec<String> = Vec::new();
+            new_pack.push(token_id);
+            Ok(new_pack)
+        },
+    })?;
+    
+    Ok(Response {
+        messages: vec![],
+        attributes: vec![
+            attr("action", "add_purchased_token"),
         ],
         events: vec![],
         data: None,
@@ -357,6 +401,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&query_token_mintable(deps, athlete_id)?),
         QueryMsg::TokenCount {} => to_binary(&query_token_count(deps)?),
         QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
+        QueryMsg::PurchasedPack {
+            last_round
+        } => to_binary(&query_purchased_pack(deps, last_round)?),
     }
 }
 
@@ -389,6 +436,13 @@ fn query_token_address(
     athlete_id: String
 ) -> StdResult<Addr> {
     token_addresses_read(deps.storage).load(athlete_id.as_bytes())
+}
+
+fn query_purchased_pack(
+    deps: Deps,
+    last_round: String
+) -> StdResult<Option<Vec<String>>> {
+    purchased_pack_read(deps.storage).may_load(last_round.as_bytes())
 }
 
 fn query_token_mintable(
@@ -428,9 +482,9 @@ fn query_terrand(
     let terrand_res: LatestRandomResponse = deps.querier.query(&wasm.into())?;
     let randomness_hash = hex::encode(terrand_res.randomness.as_slice());
 
-    if terrand_res.round <= last_round {
-        return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
-    }
+    // if terrand_res.round <= last_round {
+    //     return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
+    // }
 
     update_last_round(deps, env, &terrand_res.round)?;
 
