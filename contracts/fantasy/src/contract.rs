@@ -292,7 +292,7 @@ pub fn execute_add_token(
         let token_addr = deps.api.addr_validate(&token)?;
         let athlete_id = query_token_count(deps.as_ref()).unwrap();
 
-        token_addresses(deps.storage).update(&athlete_id.to_string().as_bytes(), |old| match old {
+        token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
             Some(_) => Err(ContractError::Claimed {}),
             None => Ok(token_addr.clone()),
         })?;
@@ -319,7 +319,7 @@ pub fn execute_add_purchased_token(
 
     let mut pack = query_purchased_pack(deps.as_ref(), last_round.clone())?.unwrap_or_default();
  
-    purchased_pack(deps.storage).update(&last_round.as_bytes(), |old| match old {
+    purchased_pack(deps.storage).update::<_, ContractError>(&last_round.as_bytes(), |old| match old {
         // If last_round key exists within the storage
         Some(_) => {
             // Load purchased_pack then push the new token_ids

@@ -20,4 +20,7 @@ pub enum ContractError {
 
     #[error("Token cannot be unlocked at this time")]
     Locked {},
+
+    #[error("Something went wrong")]
+    DefaultErr {},
 }
