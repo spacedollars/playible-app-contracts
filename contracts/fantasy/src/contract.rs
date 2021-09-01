@@ -482,9 +482,9 @@ fn query_terrand(
     let terrand_res: LatestRandomResponse = deps.querier.query(&wasm.into())?;
     let randomness_hash = hex::encode(terrand_res.randomness.as_slice());
 
-    if terrand_res.round <= last_round {
-        return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
-    }
+    // if terrand_res.round <= last_round {
+    //     return Err(StdError::generic_err("The current round has already been used. Please wait for the next round."))
+    // }
 
     update_last_round(deps, env, &terrand_res.round)?;
 
