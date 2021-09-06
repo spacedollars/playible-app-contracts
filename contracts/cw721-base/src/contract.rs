@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, to_binary, Binary, BlockInfo, Deps, DepsMut, Env, MessageInfo, Order, Pair, Response,
-    StdError, StdResult, SubMsg, WasmMsg, CosmosMsg
+    to_binary, Binary, BlockInfo, Deps, DepsMut, Env, MessageInfo, Order, Pair, Response, 
+    StdError, StdResult, WasmMsg, CosmosMsg
 };
 
 use cw0::maybe_addr;
@@ -107,6 +107,8 @@ pub fn execute_mint(
     let rank_copy_1 = msg.rank.clone();
     let rank_copy_2 = msg.rank.clone();
     let rank_copy_3 = msg.rank.clone();
+    let rank_copy_4 = msg.rank.clone();
+    let rank_copy_5 = msg.rank.clone();
 
     let minter = MINTER.load(deps.storage)?;
 
@@ -146,7 +148,11 @@ pub fn execute_mint(
         increment_base_tokens(deps.storage)?;
     }
 
-    let mut response = Response::new();
+    let mut response = Response::new()
+        .add_attribute("action", "mint")
+        .add_attribute("minter", info.sender.clone())
+        .add_attribute("token_id", token_id.clone())
+        .add_attribute("rank", rank_copy_4);
 
     if msg.mint_type.eq("pack"){       
         let fantasy_msg = FantasyMsg::AddPurchasedToken {
@@ -160,13 +166,8 @@ pub fn execute_mint(
             vec![]
         )?;
 
-        response.add_message(fantasy_res);
+        response = response.add_message(fantasy_res);
     }
-
-    response.add_attribute("action", "mint");
-    response.add_attribute("minter", info.sender);
-    response.add_attribute("token_id", token_id);
-    response.add_attribute("rank", rank_copy_3);
 
     Ok(response)
 }
@@ -186,16 +187,10 @@ pub fn execute_update_minter(
     let new_minter = deps.api.addr_validate(&minter)?;
     MINTER.save(deps.storage, &new_minter)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "update_minter"),
-            attr("prev_minter", prev_minter),
-            attr("new_minter", minter),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "update_minter")
+        .add_attribute("prev_minter", prev_minter)
+        .add_attribute("new_minter", minter))
 }
 
 pub fn execute_upgrade_token(
@@ -227,15 +222,9 @@ pub fn execute_upgrade_token(
         funds: vec![],
     }.into()))?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "upgrade_token"),
-            attr("sender", info.sender),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "upgrade_token")
+        .add_attribute("sender", info.sender))
 }
 
 pub fn execute_lock_token(
@@ -256,15 +245,9 @@ pub fn execute_lock_token(
 
     tokens().save(deps.storage, &token_id, &token)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "lock_token"),
-            attr("token_id", token_id.clone()),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "lock_token")
+        .add_attribute("token_id", token_id.clone()))
 }
 
 pub fn execute_unlock_token(
@@ -288,15 +271,9 @@ pub fn execute_unlock_token(
 
     tokens().save(deps.storage, &token_id, &token)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "unlock_token"),
-            attr("token_id", token_id.clone()),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "unlock_token")
+        .add_attribute("token_id", token_id.clone()))
 }
 
 pub fn execute_transfer_nft(
@@ -308,17 +285,11 @@ pub fn execute_transfer_nft(
 ) -> Result<Response, ContractError> {
     _transfer_nft(deps, &env, &info, &recipient, &token_id)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "transfer_nft"),
-            attr("sender", info.sender),
-            attr("recipient", recipient),
-            attr("token_id", token_id),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "transfer_nft")
+        .add_attribute("sender", info.sender)
+        .add_attribute("recipient", recipient)
+        .add_attribute("token_id", token_id))
 }
 
 pub fn execute_send_nft(
@@ -339,17 +310,12 @@ pub fn execute_send_nft(
     };
 
     // Send message
-    Ok(Response {
-        messages: vec![SubMsg::new(send.into_cosmos_msg(contract.clone())?)],
-        attributes: vec![
-            attr("action", "send_nft"),
-            attr("sender", info.sender),
-            attr("recipient", contract),
-            attr("token_id", token_id),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_message(send.into_cosmos_msg(contract.clone())?)
+        .add_attribute("action", "send_nft")
+        .add_attribute("sender", info.sender)
+        .add_attribute("recipient", contract)
+        .add_attribute("token_id", token_id))
 }
 
 pub fn _transfer_nft(
@@ -379,17 +345,11 @@ pub fn execute_approve(
 ) -> Result<Response, ContractError> {
     _update_approvals(deps, &env, &info, &spender, &token_id, true, expires)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "approve"),
-            attr("sender", info.sender),
-            attr("spender", spender),
-            attr("token_id", token_id),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "approve")
+        .add_attribute("sender", info.sender)
+        .add_attribute("spender", spender)
+        .add_attribute("token_id", token_id))
 }
 
 pub fn execute_revoke(
@@ -401,17 +361,11 @@ pub fn execute_revoke(
 ) -> Result<Response, ContractError> {
     _update_approvals(deps, &env, &info, &spender, &token_id, false, None)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "revoke"),
-            attr("sender", info.sender),
-            attr("spender", spender),
-            attr("token_id", token_id),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "revoke")
+        .add_attribute("sender", info.sender)
+        .add_attribute("spender", spender)
+        .add_attribute("token_id", token_id))
 }
 
 pub fn _update_approvals(
@@ -472,16 +426,10 @@ pub fn execute_approve_all(
     let operator_addr = deps.api.addr_validate(&operator)?;
     OPERATORS.save(deps.storage, (&info.sender, &operator_addr), &expires)?;
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "approve_all"),
-            attr("sender", info.sender),
-            attr("operator", operator),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "approve_all")
+        .add_attribute("sender", info.sender)
+        .add_attribute("operator", operator))
 }
 
 pub fn execute_revoke_all(
@@ -493,16 +441,10 @@ pub fn execute_revoke_all(
     let operator_addr = deps.api.addr_validate(&operator)?;
     OPERATORS.remove(deps.storage, (&info.sender, &operator_addr));
 
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "revoke_all"),
-            attr("sender", info.sender),
-            attr("operator", operator),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "revoke_all")
+        .add_attribute("sender", info.sender)
+        .add_attribute("operator", operator))
 }
 
 // returns a string containing contract symbol + token rank + token count
@@ -636,7 +578,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
         QueryMsg::AllTokens { start_after, limit } => {
             to_binary(&query_all_tokens(deps, start_after, limit)?)
-        },
+        }
         QueryMsg::IsMintable { rank } => to_binary(&query_mintable(deps, rank)?),
         QueryMsg::CanUnlockToken { token_id } => to_binary(&query_unlock_token(deps, token_id)?),
     }
@@ -767,23 +709,16 @@ fn query_tokens(
     limit: Option<u32>,
 ) -> StdResult<TokensResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start_addr = maybe_addr(deps.api, start_after)?;
-    let start = start_addr.map(|addr| Bound::exclusive(addr.as_ref()));
+    let start = start_after.map(Bound::exclusive);
 
     let owner_addr = deps.api.addr_validate(&owner)?;
-    let res: Result<Vec<_>, _> = tokens()
+    let pks: Vec<_> = tokens()
         .idx
         .owner
-        .pks(
-            deps.storage,
-            Vec::from(owner_addr.as_ref()),
-            start,
-            None,
-            Order::Ascending,
-        )
+        .prefix(owner_addr)
+        .keys(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .collect();
-    let pks = res?;
 
     let res: Result<Vec<_>, _> = pks.iter().map(|v| String::from_utf8(v.to_vec())).collect();
     let tokens = res.map_err(StdError::invalid_utf8)?;
@@ -1019,15 +954,11 @@ fn humanize_approval(approval: &Approval) -> cw721::Approval {
 
 //         assert_eq!(
 //             res,
-//             Response {
-//                 attributes: vec![
-//                     attr("action", "transfer_nft"),
-//                     attr("sender", "venus"),
-//                     attr("recipient", "random"),
-//                     attr("token_id", token_id),
-//                 ],
-//                 ..Response::default()
-//             }
+//             Response::new()
+//                 .add_attribute("action", "transfer_nft")
+//                 .add_attribute("sender", "venus")
+//                 .add_attribute("recipient", "random")
+//                 .add_attribute("token_id", token_id)
 //         );
 //     }
 
@@ -1073,9 +1004,9 @@ fn humanize_approval(approval: &Approval) -> cw721::Approval {
 //             token_id: token_id.clone(),
 //             msg,
 //         };
-//         let expected = SubMsg::new(payload.into_cosmos_msg(target.clone()).unwrap());
+//         let expected = payload.into_cosmos_msg(target.clone()).unwrap();
 //         // ensure expected serializes as we think it should
-//         match &expected.msg {
+//         match &expected {
 //             CosmosMsg::Wasm(WasmMsg::Execute { contract_addr, .. }) => {
 //                 assert_eq!(contract_addr, &target)
 //             }
@@ -1084,16 +1015,12 @@ fn humanize_approval(approval: &Approval) -> cw721::Approval {
 //         // and make sure this is the request sent by the contract
 //         assert_eq!(
 //             res,
-//             Response {
-//                 messages: vec![expected],
-//                 attributes: vec![
-//                     attr("action", "send_nft"),
-//                     attr("sender", "venus"),
-//                     attr("recipient", "another_contract"),
-//                     attr("token_id", token_id),
-//                 ],
-//                 ..Response::default()
-//             }
+//             Response::new()
+//                 .add_message(expected)
+//                 .add_attribute("action", "send_nft")
+//                 .add_attribute("sender", "venus")
+//                 .add_attribute("recipient", "another_contract")
+//                 .add_attribute("token_id", token_id)
 //         );
 //     }
 
@@ -1128,15 +1055,11 @@ fn humanize_approval(approval: &Approval) -> cw721::Approval {
 //         let res = execute(deps.as_mut(), mock_env(), owner, approve_msg).unwrap();
 //         assert_eq!(
 //             res,
-//             Response {
-//                 attributes: vec![
-//                     attr("action", "approve"),
-//                     attr("sender", "demeter"),
-//                     attr("spender", "random"),
-//                     attr("token_id", token_id.clone()),
-//                 ],
-//                 ..Response::default()
-//             }
+//             Response::new()
+//                 .add_attribute("action", "approve")
+//                 .add_attribute("sender", "demeter")
+//                 .add_attribute("spender", "random")
+//                 .add_attribute("token_id", token_id.clone())
 //         );
 
 //         // random can now transfer
@@ -1240,14 +1163,10 @@ fn humanize_approval(approval: &Approval) -> cw721::Approval {
 //         let res = execute(deps.as_mut(), mock_env(), owner, approve_all_msg).unwrap();
 //         assert_eq!(
 //             res,
-//             Response {
-//                 attributes: vec![
-//                     attr("action", "approve_all"),
-//                     attr("sender", "demeter"),
-//                     attr("operator", "random"),
-//                 ],
-//                 ..Response::default()
-//             }
+//             Response::new()
+//                 .add_attribute("action", "approve_all")
+//                 .add_attribute("sender", "demeter")
+//                 .add_attribute("operator", "random")
 //         );
 
 //         // random can now transfer
