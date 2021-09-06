@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError, StdResult, WasmMsg, WasmQuery, 
+    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, WasmQuery, 
     Addr, Coin, Uint128
 };
 use cosmwasm_storage::to_length_prefixed;
@@ -19,7 +19,7 @@ use crate::msg::{
 use crate::state::{
     ContractInfoResponse,
     CONTRACT_INFO, TOTAL_DEPOSIT, TOKEN_COUNT, LAST_ROUND, 
-    total_deposit, increase_deposit, decrease_deposit,
+    total_deposit, increase_deposit,
     token_count, increment_token_count,
     token_addresses, token_addresses_read,
     purchased_pack, purchased_pack_read
@@ -56,12 +56,7 @@ pub fn instantiate(
 
     match msg.tokens {
         Some(m) => execute_add_token(deps.branch(), env, m)?,
-        None => Response {
-            messages: vec![],
-            attributes: vec![],
-            events: vec![],
-            data: None,
-        },
+        None => Response::new(),
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
@@ -104,16 +99,8 @@ pub fn execute_test(
     _env: Env,
 ) -> Result<Response, ContractError> {
 
-    let response = Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "test"),
-        ],
-        events: vec![],
-        data: None,
-    };
-    
-    Ok(response)
+    Ok(Response::new()
+        .add_attribute("action", "test"))
 }
 
 pub fn execute_purchase(
@@ -124,8 +111,6 @@ pub fn execute_purchase(
     let sender = info.sender;
 
     // TODO: Generate N token ids based on the pack_len using Terrand
-    let mut response = Response::new();
-
     // Load pack_len from the state
     let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
     let token_count = query_token_count(deps.as_ref()).unwrap();
@@ -148,6 +133,9 @@ pub fn execute_purchase(
     };
     let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
     let last_round = query_last_round(deps.branch().as_ref()).unwrap();
+    let mut response = Response::new()
+        .add_attribute("action", "purchase")
+        .add_attribute("from", &sender);
 
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
@@ -169,12 +157,8 @@ pub fn execute_purchase(
         )?;
 
         // TODO: handle error from mint_res
-
-        response.add_message(mint_res);
+        response = response.add_message(mint_res);
     }
-
-    response.add_attribute("action", "purchase");
-    response.add_attribute("from", &sender);
     
     Ok(response)
 }
@@ -213,15 +197,13 @@ pub fn execute_deposit(
     )?;
 
     increase_deposit(deps.storage, coin_deposit.amount.u128() as u64)?;
-
-    let mut response = Response::new();
-    response.add_message(anchor_response);
-    response.add_attribute("action", "deposit");
-    response.add_attribute("from", &sender);
-    response.add_attribute("to", &anchor_contract);
-    response.add_attribute("deposit_amount", &coin_deposit.amount.to_string());
     
-    Ok(response)
+    Ok(Response::new()
+        .add_message(anchor_response)
+        .add_attribute("action", "deposit")
+        .add_attribute("from", &sender)
+        .add_attribute("to", &anchor_contract)
+        .add_attribute("deposit_amount", &coin_deposit.amount.to_string()))
 }
 
 pub fn execute_redeem(
@@ -271,15 +253,13 @@ pub fn execute_redeem(
         vec![]
     )?;
 
-    let mut response = Response::new();
-    response.add_message(anchor_response);
-    response.add_attribute("action", "receive");
-    response.add_attribute("from", &sender);
-    response.add_attribute("to", &anchor_contract);
-    response.add_attribute("amount", &amount.to_string());
-    response.add_attribute("aust_amount", &aust_amount.to_string());
-
-    Ok(response)
+    Ok(Response::new()
+        .add_message(anchor_response)
+        .add_attribute("action", "receive")
+        .add_attribute("from", &sender)
+        .add_attribute("to", &anchor_contract)
+        .add_attribute("amount", &amount.to_string())
+        .add_attribute("aust_amount", &aust_amount.to_string()))
 }
 
 pub fn execute_add_token(
@@ -300,14 +280,8 @@ pub fn execute_add_token(
         increment_token_count(deps.storage)?;
     }
     
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "add_token"),
-        ],
-        events: vec![],
-        data: None,
-    })
+    Ok(Response::new()
+        .add_attribute("action", "add_tokens"))
 }
 
 pub fn execute_add_purchased_token(
@@ -323,26 +297,22 @@ pub fn execute_add_purchased_token(
         // If last_round key exists within the storage
         Some(_) => {
             // Load purchased_pack then push the new token_ids
-            pack.push(token_id);
+            pack.push(token_id.clone());
             Ok(pack)
         },
         // If last_round key has not been used  
         None => {
             // Create new Vec<String> and then assign to key
             let mut new_pack: Vec<String> = Vec::new();
-            new_pack.push(token_id);
+            new_pack.push(token_id.clone());
             Ok(new_pack)
         },
     })?;
-    
-    Ok(Response {
-        messages: vec![],
-        attributes: vec![
-            attr("action", "add_purchased_token"),
-        ],
-        events: vec![],
-        data: None,
-    })
+
+    Ok(Response::new()
+        .add_attribute("action", "add_purchased_token")
+        .add_attribute("last_round", &last_round)
+        .add_attribute("token_id", &token_id))
 }
 
 pub fn execute_token_turnover(
@@ -350,10 +320,12 @@ pub fn execute_token_turnover(
     env: Env,
     new_contract: String,
 ) -> Result<Response, ContractError> {
-    let mut response = Response::new();
-
     let new_address = deps.api.addr_validate(&new_contract)?;
     let token_count = query_token_count(deps.as_ref()).unwrap();
+    let mut response = Response::new()
+        .add_attribute("action", "token_turnover")
+        .add_attribute("from", &env.contract.address)
+        .add_attribute("to", &new_address.to_string());
 
     for athlete_id in 0..token_count {
         let contract_addr = query_token_address(deps.as_ref(), athlete_id.to_string()).unwrap();
@@ -369,12 +341,8 @@ pub fn execute_token_turnover(
         )?;
 
         // TODO: handle error from token_res
-        response.add_message(token_res);
+        response = response.add_message(token_res);
     }
-    
-    response.add_attribute("action", "token_turnover");
-    response.add_attribute("from", &env.contract.address);
-    response.add_attribute("to", &new_address.to_string());
 
     Ok(response)
 }
@@ -469,7 +437,7 @@ fn query_terrand(
 ) -> StdResult<Vec<String>> {
     // Load terrand_addr from the state
     let terrand_addr = query_contract_info(deps.as_ref()).unwrap().terrand_addr;
-    let last_round = query_last_round(deps.as_ref()).unwrap();
+    //let last_round = query_last_round(deps.as_ref()).unwrap();
     // String length to be returned by terrand should have 3 characters per athlete ID
     let string_len = count * 3;
 

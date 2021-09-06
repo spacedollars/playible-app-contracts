@@ -9,12 +9,10 @@ pub struct InstantiateMsg {
     pub name: String,
     /// Symbol of the NFT contract
     pub symbol: String,
-
     /// The minter is the only one who can create new NFTs.
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
-
     // Maximum number of base tokens
     pub base_cap: u64,
     // Maximum number of silver tokens
@@ -57,7 +55,6 @@ pub enum ExecuteMsg {
     RevokeAll { operator: String },
     /// Mint a new NFT, can only be called by the contract minter
     Mint(MintMsg),
-
     /// Exchanges NFTs for a higher token
     UpgradeToken {
         /// Desired rank to upgrade to
@@ -104,7 +101,6 @@ pub enum QueryMsg {
         /// unset or false will filter out expired approvals, you must set to true to see them
         include_expired: Option<bool>,
     },
-
     /// List all operators that can access all of the owner's tokens
     /// Return type: `ApprovedForAllResponse`
     ApprovedForAll {
@@ -114,18 +110,20 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
+    /// Total number of tokens issued
+    BaseTokens {},
+    SilverTokens {},
+    GoldTokens{},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
     ContractInfo {},
-
     /// With MetaData Extension.
     /// Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema*
     /// but directly from the contract: `NftInfoResponse`
     NftInfo {
         token_id: String,
     },
-
     /// With MetaData Extension.
     /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
     /// for clients: `AllNftInfo`
@@ -135,11 +133,6 @@ pub enum QueryMsg {
         include_expired: Option<bool>,
     },
 
-    /// Total number of tokens issued
-    BaseTokens {},
-    SilverTokens {},
-    GoldTokens{},
-
     /// With Enumerable extension.
     /// Returns all tokens owned by the given address, [] if unset.
     /// Return type: TokensResponse.
@@ -148,7 +141,6 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-
     /// With Enumerable extension.
     /// Requires pagination. Lists all token_ids controlled by the contract.
     /// Return type: TokensResponse.
