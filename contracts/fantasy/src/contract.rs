@@ -38,7 +38,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
-    env: Env,
+    _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -52,11 +52,6 @@ pub fn instantiate(
         anchor_addr: anchor_contract,
         terrand_addr: terrand_contract,
         pack_len: msg.pack_len,
-    };
-
-    match msg.tokens {
-        Some(m) => execute_add_token(deps.branch(), env, m)?,
-        None => Response::new(),
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
@@ -81,8 +76,8 @@ pub fn execute(
             amount,
         } => execute_redeem(deps, env, info, amount),
         ExecuteMsg::AddToken {
-            tokens
-        } => execute_add_token(deps, env, tokens),
+            token
+        } => execute_add_token(deps, env, token),
         ExecuteMsg::AddPurchasedToken {
             last_round,
             token_id
@@ -100,7 +95,9 @@ pub fn execute_test(
 ) -> Result<Response, ContractError> {
 
     Ok(Response::new()
-        .add_attribute("action", "test"))
+        .add_attribute("action", "test")
+        .add_attribute("message", "hey I have a message")
+    )
 }
 
 pub fn execute_purchase(
@@ -159,6 +156,7 @@ pub fn execute_purchase(
         // TODO: handle error from mint_res
         response = response.add_message(mint_res);
     }
+    response = response.add_attribute("last_round", last_round.to_string());
     
     Ok(response)
 }
@@ -265,23 +263,22 @@ pub fn execute_redeem(
 pub fn execute_add_token(
     deps: DepsMut,
     _env: Env,
-    tokens: Vec<String>,
+    token: String,
 ) -> Result<Response, ContractError> {
+    let token_addr = deps.api.addr_validate(&token)?;
+    let athlete_id = query_token_count(deps.as_ref()).unwrap();
 
-    for token in tokens.iter() {
-        let token_addr = deps.api.addr_validate(&token)?;
-        let athlete_id = query_token_count(deps.as_ref()).unwrap();
-
-        token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
-            Some(_) => Err(ContractError::Claimed {}),
-            None => Ok(token_addr.clone()),
-        })?;
-        
-        increment_token_count(deps.storage)?;
-    }
+    token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
+        Some(_) => Err(ContractError::Claimed {}),
+        None => Ok(token_addr.clone()),
+    })?;
+    
+    increment_token_count(deps.storage)?;
     
     Ok(Response::new()
-        .add_attribute("action", "add_tokens"))
+        .add_attribute("action", "add_tokens")
+        .add_attribute("athlete_id", athlete_id.to_string())
+    )
 }
 
 pub fn execute_add_purchased_token(
