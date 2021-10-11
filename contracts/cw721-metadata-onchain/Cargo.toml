@@ -1,9 +1,9 @@
 [package]
-name = "cw721-base"
+name = "cw721-metadata-onchain"
 version = "0.9.1"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
-description = "Basic implementation cw721 NFTs"
+description = "Example extending CW721 NFT to store metadata on chain"
 license = "Apache-2.0"
 repository = "https://github.com/CosmWasm/cw-plus"
 homepage = "https://cosmwasm.com"
@@ -25,10 +25,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cw0 = { version = "0.9.1" }
-cw2 = { version = "0.9.1" }
 cw721 = { path = "../../packages/cw721", version = "0.9.1" }
-cw-storage-plus = { version = "0.9.1" }
+cw721-base = { path = "../cw721-base", version = "0.9.1", features = ["library"] }
 cosmwasm-std = { version = "0.16.0" }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

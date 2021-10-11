@@ -1,7 +1,8 @@
-use cosmwasm_std::Binary;
-use cw721::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use cosmwasm_std::Binary;
+use cw721::Expiration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -9,16 +10,11 @@ pub struct InstantiateMsg {
     pub name: String,
     /// Symbol of the NFT contract
     pub symbol: String,
+
     /// The minter is the only one who can create new NFTs.
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
-    // Maximum number of base tokens
-    pub base_cap: u64,
-    // Maximum number of silver tokens
-    pub silver_cap: u64,
-    // Maximum number of gold tokens
-    pub gold_cap: u64,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner
@@ -26,7 +22,7 @@ pub struct InstantiateMsg {
 /// use other control logic in any contract that inherits this.
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum ExecuteMsg {
+pub enum ExecuteMsg<T> {
     /// Transfer is a base message to move a token to another account without triggering actions
     TransferNft { recipient: String, token_id: String },
     /// Send is a base message to transfer a token to a contract and trigger an action
@@ -53,42 +49,23 @@ pub enum ExecuteMsg {
     },
     /// Remove previously granted ApproveAll permission
     RevokeAll { operator: String },
+
     /// Mint a new NFT, can only be called by the contract minter
-    Mint(MintMsg),
-    /// Exchanges NFTs for a higher token
-    UpgradeToken {
-        /// Desired rank to upgrade to
-        rank: String,
-        /// NFTs to burn
-        tokens: Vec<String>,
-    },
-    /// Change the minter for the token, can only be called by the current minter
-    UpdateMinter {
-        /// Address of the new minter
-        minter: String,
-    },
-    /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
-    LockToken {
-        /// Unique ID of the NFT
-        token_id: String,
-    },
-    /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
-    UnlockToken {
-        /// Unique ID of the NFT
-        token_id: String,
-    },
+    Mint(MintMsg<T>),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MintMsg {
+pub struct MintMsg<T> {
+    /// Unique ID of the NFT
+    pub token_id: String,
     /// The owner of the newly minter NFT
     pub owner: String,
-    /// Describes the rank of the NFT 
-    pub rank: String,
-    /// Describes the type of minting to be used
-    pub mint_type: String,
-    /// last_round used for minting
-    pub last_round: Option<String>
+    /// Universal resource identifier for this NFT
+    /// Should point to a JSON file that conforms to the ERC721
+    /// Metadata JSON Schema
+    pub token_uri: Option<String>,
+    /// Any custom extension used by this contract
+    pub extension: T,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -111,9 +88,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Total number of tokens issued
-    BaseTokens {},
-    SilverTokens {},
-    GoldTokens{},
+    NumTokens {},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
@@ -151,31 +126,10 @@ pub enum QueryMsg {
 
     // Return the minter
     Minter {},
-
-    /// Returns a boolean determining if the token is mintable
-    IsMintable {
-        rank: String,
-    },
-
-    /// Checks if a locked NFT can be unlocked
-    CanUnlockToken {
-        token_id: String,
-    },
 }
 
 /// Shows who can mint these tokens
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct MinterResponse {
     pub minter: String,
-}
-
-/// Fantasy Contract Message
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum FantasyMsg {
-    /// Add minted token to purchased list
-    AddPurchasedToken {
-        last_round: String,
-        token_id: String,
-    },
 }

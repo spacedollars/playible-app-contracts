@@ -1,15 +1,11 @@
 [workspace]
 members = ["packages/*", "contracts/*"]
 
-[profile.release.package.cw20-base]
-codegen-units = 1
-incremental = false
-
 [profile.release.package.cw721-base]
 codegen-units = 1
 incremental = false
 
-[profile.release.package.fantasy]
+[profile.release.package.cw721-metadata-onchain]
 codegen-units = 1
 incremental = false
 

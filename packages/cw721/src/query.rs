@@ -88,28 +88,24 @@ pub struct NumTokensResponse {
 pub struct ContractInfoResponse {
     pub name: String,
     pub symbol: String,
-    /// cap is the maximum number of tokens that could be minted
-    pub base_cap: u64,
-    pub silver_cap: u64,
-    pub gold_cap: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct NftInfoResponse {
-    /// Identifies the rank of the NFT
-    pub rank: String,
-    /// Determines whether or not the NFT is locked for Fantasy Sports
-    pub is_locked: bool,
-    /// Determines the unlock date after the NFT has been locked
-    pub unlock_date: Option<String>,
+pub struct NftInfoResponse<T> {
+    /// Universal resource identifier for this NFT
+    /// Should point to a JSON file that conforms to the ERC721
+    /// Metadata JSON Schema
+    pub token_uri: Option<String>,
+    /// You can add any custom metadata here when you extend cw721-base
+    pub extension: T,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct AllNftInfoResponse {
+pub struct AllNftInfoResponse<T> {
     /// Who can transfer the token
     pub access: OwnerOfResponse,
     /// Data on the token itself,
-    pub info: NftInfoResponse,
+    pub info: NftInfoResponse<T>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

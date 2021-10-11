@@ -14,10 +14,4 @@ pub enum ContractError {
 
     #[error("Cannot set approval that is already expired")]
     Expired {},
-
-    #[error("Minting cannot exceed the cap")]
-    Capped {},
-
-    #[error("Token cannot be unlocked at this time")]
-    Locked {},
 }
