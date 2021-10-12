@@ -373,6 +373,7 @@ pub fn update_last_round(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
+        QueryMsg::PackPrice {} => to_binary(&query_pack_price(deps)?),
         QueryMsg::TotalDeposit {} => to_binary(&query_total_deposit(deps)?),
         QueryMsg::TokenContract {
             athlete_id
@@ -410,6 +411,10 @@ fn query_last_round(
     deps: Deps,
 ) -> StdResult<u64> {
     LAST_ROUND.load(deps.storage)
+}
+
+fn query_pack_price(deps: Deps) -> StdResult<u64> {
+    Ok(CONTRACT_INFO.load(deps.storage)?.pack_price)
 }
 
 fn query_token_address(

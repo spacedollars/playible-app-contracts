@@ -53,6 +53,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Returns the contract info for the Fantasy Contract
     ContractInfo {},
+    /// Returns the price for purchasing a pack
+    PackPrice {},
     /// Returns the contract address of the corresponding token id
     TokenContract {
         athlete_id: String,
