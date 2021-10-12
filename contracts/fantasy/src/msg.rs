@@ -15,6 +15,8 @@ pub struct InstantiateMsg {
     pub terrand_addr: String,
     // Number of Player NFTs to be pulled per pack
     pub pack_len: u64,
+    // Price of each pack
+    pub pack_price: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

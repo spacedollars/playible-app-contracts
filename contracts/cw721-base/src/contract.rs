@@ -429,7 +429,8 @@ pub fn execute_approve_all(
     Ok(Response::new()
         .add_attribute("action", "approve_all")
         .add_attribute("sender", info.sender)
-        .add_attribute("operator", operator))
+        .add_attribute("operator", operator)
+    )
 }
 
 pub fn execute_revoke_all(
@@ -444,7 +445,8 @@ pub fn execute_revoke_all(
     Ok(Response::new()
         .add_attribute("action", "revoke_all")
         .add_attribute("sender", info.sender)
-        .add_attribute("operator", operator))
+        .add_attribute("operator", operator)
+    )
 }
 
 // returns a string containing contract symbol + token rank + token count
