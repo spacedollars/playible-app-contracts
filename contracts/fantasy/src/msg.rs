@@ -13,10 +13,10 @@ pub struct InstantiateMsg {
     pub anchor_addr: String,
     // terrand contract address for calling Oracle's DRand
     pub terrand_addr: String,
-    // athlete token data (optional)
-    pub tokens: Option<Vec<String>>,
     // Number of Player NFTs to be pulled per pack
     pub pack_len: u64,
+    // Price of each pack
+    pub pack_price: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -33,7 +33,7 @@ pub enum ExecuteMsg {
     },
     /// Add athlete token contract address
     AddToken {
-        tokens: Vec<String>,
+        token: String,
     },
     /// Add minted token to purchased list
     AddPurchasedToken {
@@ -53,6 +53,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Returns the contract info for the Fantasy Contract
     ContractInfo {},
+    /// Returns the price for purchasing a pack
+    PackPrice {},
     /// Returns the contract address of the corresponding token id
     TokenContract {
         athlete_id: String,

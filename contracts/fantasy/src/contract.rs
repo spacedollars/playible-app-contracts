@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, WasmQuery, 
+    StdResult, WasmQuery, WasmMsg, 
     Addr, Coin, Uint128
 };
 use cosmwasm_storage::to_length_prefixed;
@@ -38,7 +38,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
-    env: Env,
+    _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -52,11 +52,7 @@ pub fn instantiate(
         anchor_addr: anchor_contract,
         terrand_addr: terrand_contract,
         pack_len: msg.pack_len,
-    };
-
-    match msg.tokens {
-        Some(m) => execute_add_token(deps.branch(), env, m)?,
-        None => Response::new(),
+        pack_price: msg.pack_price,
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
@@ -81,8 +77,8 @@ pub fn execute(
             amount,
         } => execute_redeem(deps, env, info, amount),
         ExecuteMsg::AddToken {
-            tokens
-        } => execute_add_token(deps, env, tokens),
+            token
+        } => execute_add_token(deps, env, token),
         ExecuteMsg::AddPurchasedToken {
             last_round,
             token_id
@@ -100,7 +96,9 @@ pub fn execute_test(
 ) -> Result<Response, ContractError> {
 
     Ok(Response::new()
-        .add_attribute("action", "test"))
+        .add_attribute("action", "test")
+        .add_attribute("message", "hey I have a message")
+    )
 }
 
 pub fn execute_purchase(
@@ -109,8 +107,15 @@ pub fn execute_purchase(
     info: MessageInfo, 
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
+    let contract_info = query_contract_info(deps.as_ref()).unwrap();
 
-    // TODO: Generate N token ids based on the pack_len using Terrand
+    if info.funds.len() != 1 || 
+        info.funds[0].denom != contract_info.stable_denom || 
+        info.funds[0].amount != Uint128::from(contract_info.pack_price)
+    {
+        return Err(ContractError::WrongAmount{amount:contract_info.pack_price, denom:contract_info.stable_denom})
+    }
+
     // Load pack_len from the state
     let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
     let token_count = query_token_count(deps.as_ref()).unwrap();
@@ -127,12 +132,16 @@ pub fn execute_purchase(
 
     // Generate the list of athlete IDs to be minted
     // let hex_list = query_terrand(deps, env, pack_len).unwrap();
+    /*
     let hex_list = match query_terrand(deps.branch(), env, pack_len) {
         Ok(list) => list,
         Err(error) => return Err(ContractError::Std(error)),
     };
     let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
     let last_round = query_last_round(deps.branch().as_ref()).unwrap();
+    */
+    let mint_index_list = [0, 0, 0, 0, 0];
+    let last_round = 420;
     let mut response = Response::new()
         .add_attribute("action", "purchase")
         .add_attribute("from", &sender);
@@ -140,8 +149,6 @@ pub fn execute_purchase(
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
         let token_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
-
-        //TODO: Handle error from query_token_address. Ensure that the generated token ids are a subset of the token addresses
         
         let mint_msg = TokenMsg::Mint {
             owner: sender.clone().to_string(),
@@ -150,15 +157,22 @@ pub fn execute_purchase(
             last_round: Some(last_round.to_string()),
         };
 
-        let mint_res = encode_msg_execute(
+        response = response.add_message(WasmMsg::Execute {
+            contract_addr: token_address.clone().to_string(),
+            msg: to_binary(&mint_msg).unwrap(),
+            funds: vec![],
+        });
+
+        /*let mint_res = encode_msg_execute(
             to_binary(&mint_msg).unwrap(),
             token_address.clone(),
             vec![]
-        )?;
+        )?;*/
 
         // TODO: handle error from mint_res
-        response = response.add_message(mint_res);
+        //response = response.add_message(mint_res);
     }
+    response = response.add_attribute("last_round", last_round.to_string());
     
     Ok(response)
 }
@@ -265,23 +279,22 @@ pub fn execute_redeem(
 pub fn execute_add_token(
     deps: DepsMut,
     _env: Env,
-    tokens: Vec<String>,
+    token: String,
 ) -> Result<Response, ContractError> {
+    let token_addr = deps.api.addr_validate(&token)?;
+    let athlete_id = query_token_count(deps.as_ref()).unwrap();
 
-    for token in tokens.iter() {
-        let token_addr = deps.api.addr_validate(&token)?;
-        let athlete_id = query_token_count(deps.as_ref()).unwrap();
-
-        token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
-            Some(_) => Err(ContractError::Claimed {}),
-            None => Ok(token_addr.clone()),
-        })?;
-        
-        increment_token_count(deps.storage)?;
-    }
+    token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
+        Some(_) => Err(ContractError::Claimed {}),
+        None => Ok(token_addr.clone()),
+    })?;
+    
+    increment_token_count(deps.storage)?;
     
     Ok(Response::new()
-        .add_attribute("action", "add_tokens"))
+        .add_attribute("action", "add_tokens")
+        .add_attribute("athlete_id", athlete_id.to_string())
+    )
 }
 
 pub fn execute_add_purchased_token(
@@ -360,6 +373,7 @@ pub fn update_last_round(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
+        QueryMsg::PackPrice {} => to_binary(&query_pack_price(deps)?),
         QueryMsg::TotalDeposit {} => to_binary(&query_total_deposit(deps)?),
         QueryMsg::TokenContract {
             athlete_id
@@ -397,6 +411,10 @@ fn query_last_round(
     deps: Deps,
 ) -> StdResult<u64> {
     LAST_ROUND.load(deps.storage)
+}
+
+fn query_pack_price(deps: Deps) -> StdResult<u64> {
+    Ok(CONTRACT_INFO.load(deps.storage)?.pack_price)
 }
 
 fn query_token_address(
