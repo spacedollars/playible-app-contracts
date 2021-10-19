@@ -57,6 +57,12 @@ pub enum ExecuteMsg<T> {
 
     /// Mint a new NFT, can only be called by the contract minter
     Mint(MintMsg<T>),
+    /// Updates a token's metadata information
+    UpdateToken {
+        token_id: String,
+        token_uri: Option<String>,
+        extension: Option<T>
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

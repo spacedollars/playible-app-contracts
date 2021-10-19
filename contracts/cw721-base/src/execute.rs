@@ -71,6 +71,11 @@ where
                 token_id,
                 msg,
             } => self.send_nft(deps, env, info, contract, token_id, msg),
+            ExecuteMsg::UpdateToken {
+                token_id,
+                token_uri,
+                extension,
+            } => self.update_token(deps, env, info, token_id, token_uri, extension),
         }
     }
 }
@@ -133,6 +138,27 @@ where
             .add_attribute("minter", info.sender)
             .add_attribute("token_id", token_id.clone())
             .add_attribute("rank", rank_copy_4))
+    }
+
+    pub fn update_token(
+        &self,
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        token_id: String,
+        token_uri: Option<String>,  
+        extension: Option<T>
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
+
+        token.token_uri = token_uri;
+        token.extension = extension.unwrap();
+
+        self.tokens.save(deps.storage, &token_id.clone(), &token)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "update_token")
+            .add_attribute("token_id", token_id.clone()))
     }
 
     // returns a string containing contract symbol + token rank + token count
