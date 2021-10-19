@@ -151,6 +151,12 @@ pub enum TokenMsg {
         /// Address of the new minter
         minter: String,
     },
+    TransferNft { 
+        /// Burn Address (Fantasy Contract Address)
+        recipient: String, 
+        /// Token ID of the NFT to be transferred/burned
+        token_id: String 
+    },
     NftInfo {
         /// Token ID of the NFT to be queried
         token_id: String,

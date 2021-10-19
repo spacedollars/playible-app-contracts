@@ -97,6 +97,11 @@ pub fn execute(
             athlete_id,
             token_id,
         } => execute_unlock_token(deps, env, info, athlete_id, token_id),
+        ExecuteMsg::UpgradeToken {
+            athlete_id,
+            rarity,
+            tokens
+        } => execute_upgrade_token(deps, env, info, athlete_id, rarity, tokens),
     }
 }
 
@@ -466,6 +471,55 @@ pub fn execute_unlock_token(
         .add_attribute("token_id", token_id.clone()))
 }
 
+pub fn execute_upgrade_token(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    athlete_id: String,
+    rarity: String,
+    tokens: Vec<String>
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
+    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+
+    let mut response = Response::new()
+        .add_attribute("action", "upgrade_token")
+        .add_attribute("from", sender.clone());
+
+    // Burn fodder tokens
+    for token in tokens.iter() {
+        let burn_msg = TokenMsg::TransferNft {
+            recipient: env.contract.address.to_string(),
+            token_id: token.clone()
+        };
+
+        response = response.add_message(WasmMsg::Execute {
+            contract_addr: token_address.clone().to_string(),
+            msg: to_binary(&burn_msg).unwrap(),
+            funds: vec![],
+        });
+    }
+    
+    // Mint higher rarity token
+    let mint_msg = TokenMsg::Mint {
+        owner: sender.clone().to_string(),
+        token_uri: None,
+        rarity: rarity,
+        extension: TokenExtension {
+            is_locked: false,
+            unlock_date: None
+        }
+    };
+
+    response = response.add_message(WasmMsg::Execute {
+        contract_addr: token_address.clone().to_string(),
+        msg: to_binary(&mint_msg).unwrap(),
+        funds: vec![],
+    });
+    
+    Ok(response)
+}
+
 pub fn update_last_round(
     deps: DepsMut,
     _env: Env,
@@ -565,7 +619,6 @@ fn query_token_info(
 ) -> StdResult<NftInfoResponse> {
     let token_address = query_token_address(deps, athlete_id).unwrap();
 
-    // Query token_address if mintable using the NFT contract's IsMintable{} query
     let msg = TokenMsg::NftInfo { token_id: token_id };
     let wasm = WasmQuery::Smart {
         contract_addr: token_address.to_string(),
