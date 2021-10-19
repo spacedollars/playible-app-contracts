@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, WasmQuery, WasmMsg, 
-    Addr, Coin, Uint128
+    Addr, Coin, Uint128, Timestamp
 };
 use cosmwasm_storage::to_length_prefixed;
 use cosmwasm_bignumber::{Decimal256};
@@ -88,11 +88,11 @@ pub fn execute(
         ExecuteMsg::TokenTurnover {
             new_contract
         } => execute_token_turnover(deps, env, new_contract),
-        // ExecuteMsg::LockToken {
-        //     athlete_id,
-        //     token_id,
-        //     duration
-        // } => execute_lock_token(deps, env, athlete_id, token_id, duration),
+        ExecuteMsg::LockToken {
+            athlete_id,
+            token_id,
+            duration
+        } => execute_lock_token(deps, env, info, athlete_id, token_id, duration),
     }
 }
 
@@ -367,6 +367,53 @@ pub fn execute_token_turnover(
     }
 
     Ok(response)
+}
+
+pub fn execute_lock_token(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    athlete_id: String,
+    token_id: String,
+    duration: String
+) -> Result<Response, ContractError> {
+    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+    let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
+    let curr_date = env.block.time;
+
+    // TODO: Add token ownership authentication when executing this function
+    // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
+
+    token.extension.is_locked = true;
+
+    if duration.clone().eq("hour"){
+        token.extension.unlock_date = Some(curr_date.plus_seconds(3_600));
+    } else if duration.clone().eq("day"){
+        token.extension.unlock_date = Some(curr_date.plus_seconds(86_400));
+    } else if duration.clone().eq("week"){
+        token.extension.unlock_date = Some(curr_date.plus_seconds(604_800));
+    } else {
+        token.extension.unlock_date = Some(curr_date.plus_seconds(60));
+    }
+
+    let update_msg = TokenMsg::UpdateToken {
+        token_id: token_id.clone(),
+        token_uri: None,
+        extension: TokenExtension {
+            is_locked: token.extension.is_locked,
+            unlock_date: token.extension.unlock_date
+        }
+    };
+    
+    Ok(Response::new()
+        .add_message(WasmMsg::Execute {
+            contract_addr: token_address.clone().to_string(),
+            msg: to_binary(&update_msg).unwrap(),
+            funds: vec![],
+        })
+        .add_attribute("action", "lock_token")
+        .add_attribute("token_id", token_id.clone())
+        .add_attribute("duration", duration.clone()))
 }
 
 pub fn update_last_round(
