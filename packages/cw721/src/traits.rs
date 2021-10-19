@@ -93,7 +93,7 @@ where
 
     fn contract_info(&self, deps: Deps) -> StdResult<ContractInfoResponse>;
 
-    fn num_tokens(&self, deps: Deps) -> StdResult<NumTokensResponse>;
+    fn num_tokens(&self, deps: Deps, rank: String) -> StdResult<NumTokensResponse>;
 
     fn nft_info(&self, deps: Deps, token_id: String) -> StdResult<NftInfoResponse<T>>;
 

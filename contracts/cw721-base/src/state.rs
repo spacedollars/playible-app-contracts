@@ -14,7 +14,9 @@ where
 {
     pub contract_info: Item<'a, ContractInfoResponse>,
     pub minter: Item<'a, Addr>,
-    pub token_count: Item<'a, u64>,
+    pub base_count: Item<'a, u64>,
+    pub silver_count: Item<'a, u64>,
+    pub gold_count: Item<'a, u64>,
     /// Stored as (granter, operator) giving operator full control over granter's account
     pub operators: Map<'a, (&'a Addr, &'a Addr), Expiration>,
     pub tokens: IndexedMap<'a, &'a str, TokenInfo<T>, TokenIndexes<'a, T>>,
@@ -38,7 +40,9 @@ where
         Self::new(
             "nft_info",
             "minter",
-            "num_tokens",
+            "base_tokens",
+            "silver_tokens",
+            "gold_tokens",
             "operators",
             "tokens",
             "tokens__owner",
@@ -53,7 +57,9 @@ where
     fn new(
         contract_key: &'a str,
         minter_key: &'a str,
-        token_count_key: &'a str,
+        base_count_key: &'a str,
+        silver_count_key: &'a str,
+        gold_count_key: &'a str,
         operator_key: &'a str,
         tokens_key: &'a str,
         tokens_owner_key: &'a str,
@@ -64,20 +70,42 @@ where
         Self {
             contract_info: Item::new(contract_key),
             minter: Item::new(minter_key),
-            token_count: Item::new(token_count_key),
+            base_count: Item::new(base_count_key),
+            silver_count: Item::new(silver_count_key),
+            gold_count: Item::new(gold_count_key),
             operators: Map::new(operator_key),
             tokens: IndexedMap::new(tokens_key, indexes),
             _custom_response: PhantomData,
         }
     }
 
-    pub fn token_count(&self, storage: &dyn Storage) -> StdResult<u64> {
-        Ok(self.token_count.may_load(storage)?.unwrap_or_default())
+    pub fn base_count(&self, storage: &dyn Storage) -> StdResult<u64> {
+        Ok(self.base_count.may_load(storage)?.unwrap_or_default())
     }
 
-    pub fn increment_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.token_count(storage)? + 1;
-        self.token_count.save(storage, &val)?;
+    pub fn increment_base_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
+        let val = self.base_count(storage)? + 1;
+        self.base_count.save(storage, &val)?;
+        Ok(val)
+    }
+
+    pub fn silver_count(&self, storage: &dyn Storage) -> StdResult<u64> {
+        Ok(self.silver_count.may_load(storage)?.unwrap_or_default())
+    }
+
+    pub fn increment_silver_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
+        let val = self.silver_count(storage)? + 1;
+        self.silver_count.save(storage, &val)?;
+        Ok(val)
+    }
+
+    pub fn gold_count(&self, storage: &dyn Storage) -> StdResult<u64> {
+        Ok(self.gold_count.may_load(storage)?.unwrap_or_default())
+    }
+
+    pub fn increment_gold_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
+        let val = self.gold_count(storage)? + 1;
+        self.gold_count.save(storage, &val)?;
         Ok(val)
     }
 }

@@ -25,8 +25,17 @@ where
         self.contract_info.load(deps.storage)
     }
 
-    fn num_tokens(&self, deps: Deps) -> StdResult<NumTokensResponse> {
-        let count = self.token_count(deps.storage)?;
+    fn num_tokens(&self, deps: Deps, rank: String) -> StdResult<NumTokensResponse> {
+        let mut count: u64 = 0;
+
+        if rank.eq("S"){
+            count = self.silver_count(deps.storage)?;
+        } else if rank.eq("G"){
+            count = self.gold_count(deps.storage)?;
+        } else  {
+            count = self.base_count(deps.storage)?;
+        }
+
         Ok(NumTokensResponse { count })
     }
 
@@ -156,6 +165,28 @@ where
         })
     }
 
+    pub fn query_mintable(&self, deps: Deps, rank: String) -> StdResult<bool> {
+        let contract_info = self.contract_info(deps).unwrap();
+        let token_count = self.num_tokens(deps, rank.clone()).unwrap();
+        let mut is_mintable = true;
+    
+        if rank.eq("S"){
+            if token_count.count == contract_info.silver_cap {
+                is_mintable = false
+            }
+        } else if rank.eq("G"){
+            if token_count.count == contract_info.gold_cap {
+                is_mintable = false
+            }
+        } else  {
+            if token_count.count == contract_info.base_cap {
+                is_mintable = false
+            }
+        }
+    
+        Ok(is_mintable)
+    }
+
     pub fn query(&self, deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         match msg {
             QueryMsg::Minter {} => to_binary(&self.minter(deps)?),
@@ -189,7 +220,9 @@ where
                 start_after,
                 limit,
             )?),
-            QueryMsg::NumTokens {} => to_binary(&self.num_tokens(deps)?),
+            QueryMsg::BaseTokens {} => to_binary(&self.num_tokens(deps, "B".to_string())?),
+            QueryMsg::SilverTokens {} => to_binary(&self.num_tokens(deps, "S".to_string())?),
+            QueryMsg::GoldTokens {} => to_binary(&self.num_tokens(deps, "G".to_string())?),
             QueryMsg::Tokens {
                 owner,
                 start_after,
@@ -197,7 +230,8 @@ where
             } => to_binary(&self.tokens(deps, owner, start_after, limit)?),
             QueryMsg::AllTokens { start_after, limit } => {
                 to_binary(&self.all_tokens(deps, start_after, limit)?)
-            }
+            },
+            QueryMsg::IsMintable { rank } => to_binary(&self.query_mintable(deps, rank)?)
         }
     }
 }

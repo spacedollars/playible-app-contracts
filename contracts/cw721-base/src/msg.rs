@@ -10,11 +10,16 @@ pub struct InstantiateMsg {
     pub name: String,
     /// Symbol of the NFT contract
     pub symbol: String,
-
     /// The minter is the only one who can create new NFTs.
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
+    // Maximum number of base tokens
+    pub base_cap: u64,
+    // Maximum number of silver tokens
+    pub silver_cap: u64,
+    // Maximum number of gold tokens
+    pub gold_cap: u64,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner
@@ -64,6 +69,8 @@ pub struct MintMsg<T> {
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
+    /// Describes the rank of the NFT 
+    pub rank: String,
     /// Any custom extension used by this contract
     pub extension: T,
 }
@@ -88,7 +95,9 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Total number of tokens issued
-    NumTokens {},
+    BaseTokens {},
+    SilverTokens {},
+    GoldTokens{},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
@@ -126,6 +135,10 @@ pub enum QueryMsg {
 
     // Return the minter
     Minter {},
+    /// Returns a boolean determining if the token is mintable
+    IsMintable {
+        rank: String,
+    },
 }
 
 /// Shows who can mint these tokens

@@ -4,7 +4,7 @@ use serde::Serialize;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
 use cw2::set_contract_version;
-use cw721::{ContractInfoResponse, CustomMsg, Cw721Execute, Cw721ReceiveMsg, Expiration};
+use cw721::{ContractInfoResponse, CustomMsg, Cw721Execute, Cw721Query, Cw721ReceiveMsg, Expiration};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MintMsg};
@@ -31,6 +31,9 @@ where
         let info = ContractInfoResponse {
             name: msg.name,
             symbol: msg.symbol,
+            base_cap: msg.base_cap,
+            silver_cap: msg.silver_cap,
+            gold_cap: msg.gold_cap,
         };
         self.contract_info.save(deps.storage, &info)?;
         let minter = deps.api.addr_validate(&msg.minter)?;
@@ -86,6 +89,10 @@ where
         msg: MintMsg<T>,
     ) -> Result<Response<C>, ContractError> {
         let minter = self.minter.load(deps.storage)?;
+        let rank_copy_1 = msg.rank.clone();
+        let rank_copy_2 = msg.rank.clone();
+        let rank_copy_3 = msg.rank.clone();
+        let rank_copy_4 = msg.rank.clone();
 
         if info.sender != minter {
             return Err(ContractError::Unauthorized {});
@@ -98,18 +105,59 @@ where
             token_uri: msg.token_uri,
             extension: msg.extension,
         };
+
+        // check if the token is mintable according to the listed cap
+        if !self.query_mintable(deps.as_ref(), rank_copy_1).unwrap() {
+            return Err(ContractError::Capped {})
+        }
+
+        // generate a token id based on rank
+        let token_id = self.generate_token_id(deps.as_ref(), rank_copy_2).unwrap();
+
         self.tokens
-            .update(deps.storage, &msg.token_id, |old| match old {
+            .update(deps.storage, &token_id, |old| match old {
                 Some(_) => Err(ContractError::Claimed {}),
                 None => Ok(token),
             })?;
 
-        self.increment_tokens(deps.storage)?;
+        if rank_copy_3.eq("S"){
+            self.increment_silver_tokens(deps.storage)?;
+        } else if rank_copy_3.eq("G"){
+            self.increment_gold_tokens(deps.storage)?;
+        } else  {
+            self.increment_base_tokens(deps.storage)?;
+        }
 
         Ok(Response::new()
             .add_attribute("action", "mint")
             .add_attribute("minter", info.sender)
-            .add_attribute("token_id", msg.token_id))
+            .add_attribute("token_id", token_id.clone())
+            .add_attribute("rank", rank_copy_4))
+    }
+
+    // returns a string containing contract symbol + token rank + token count
+    fn generate_token_id (
+        &self,
+        deps: Deps,
+        rank: String,
+    ) -> StdResult<String> {
+
+        let contract_info = self.contract_info(deps).unwrap();
+        let mut token_id: String = contract_info.symbol.to_owned();
+
+        let token_count = self.num_tokens(deps, rank.clone()).unwrap().count + 1;
+        
+        let mut rank_string: &str = "B";
+        if rank.eq("S"){
+            rank_string = "S"; 
+        } else if rank.eq("G"){
+            rank_string = "G";
+        } 
+
+        token_id.push_str(rank_string);
+        token_id.push_str(&token_count.to_string());
+
+        Ok(token_id)
     }
 }
 
