@@ -19,16 +19,6 @@ pub struct InstantiateMsg {
     pub pack_price: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct NftInfoResponse {
-    /// Universal Resource Identifier link of the NFT
-    pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
-    /// Additional Metadata of Fantasy Athlete tokens
-    pub extension: Extension,
-}
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct TokenExtension {
     /// Determines whether or not the NFT is locked for Fantasy Sports
@@ -37,7 +27,15 @@ pub struct TokenExtension {
     pub unlock_date: Option<Timestamp>,
 }
 
-pub type Extension = Option<TokenExtension>;
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct NftInfoResponse {
+    /// Universal Resource Identifier link of the NFT
+    pub token_uri: Option<String>,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
+    /// Additional Metadata of Fantasy Athlete tokens
+    pub extension: TokenExtension,
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -68,8 +66,8 @@ pub enum ExecuteMsg {
     },
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
     LockToken {
-        /// Contract address of the Athlete Token
-        contract_addr: String,
+        /// Athlete ID of the NFT
+        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
         /// Time before a token can be unlocked
@@ -77,15 +75,15 @@ pub enum ExecuteMsg {
     },
     /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
     UnlockToken {
-        /// Contract address of the Athlete Token
-        contract_addr: String,
+        /// Athlete ID of the NFT
+        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
     },
     /// Exchanges NFTs for a higher rarity token
     UpgradeToken {
-        /// Contract address of the Athlete Token
-        contract_addr: String,
+        /// Athlete ID of the NFT
+        athlete_id: String,
         /// Describes the rarity of the NFT 
         rarity: String,
         /// NFTs to burn
@@ -139,7 +137,7 @@ pub enum TokenMsg {
         /// Describes the rarity of the NFT 
         rarity: String,
         /// Additional Metadata of Fantasy Athlete tokens
-        extension: Extension
+        extension: TokenExtension
     },
     UpdateToken {
         /// Token ID of the NFT to be updated
@@ -147,7 +145,7 @@ pub enum TokenMsg {
         /// URI link of the NFT image
         token_uri: Option<String>,
         /// Additional Metadata of Fantasy Athlete tokens
-        extension: Extension
+        extension: TokenExtension
     },
     UpdateMinter {
         /// Address of the new minter

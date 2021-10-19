@@ -72,6 +72,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::Test {} => execute_test(deps, env),
         ExecuteMsg::PurchasePack {} => execute_purchase(deps, env, info),
         ExecuteMsg::DepositStable {} => execute_deposit(deps, env, info),
         ExecuteMsg::RedeemStable {
@@ -87,7 +88,11 @@ pub fn execute(
         ExecuteMsg::TokenTurnover {
             new_contract
         } => execute_token_turnover(deps, env, new_contract),
-        ExecuteMsg::Test {} => execute_test(deps, env),
+        // ExecuteMsg::LockToken {
+        //     athlete_id,
+        //     token_id,
+        //     duration
+        // } => execute_lock_token(deps, env, athlete_id, token_id, duration),
     }
 }
 
@@ -155,10 +160,10 @@ pub fn execute_purchase(
             owner: sender.clone().to_string(),
             token_uri: None,
             rarity: "C".to_string(),
-            extension: Some(TokenExtension{
+            extension: TokenExtension {
                 is_locked: false,
                 unlock_date: None
-            })
+            }
         };
 
         response = response.add_message(WasmMsg::Execute {
@@ -450,6 +455,34 @@ fn query_token_mintable(
     let is_mintable: bool = deps.querier.query(&wasm.into())?;
 
     Ok(is_mintable)
+}
+
+fn query_token_info(
+    deps: Deps,
+    athlete_id: String,
+    token_id: String
+) -> StdResult<NftInfoResponse> {
+    let token_address = query_token_address(deps, athlete_id).unwrap();
+
+    // Query token_address if mintable using the NFT contract's IsMintable{} query
+    let msg = TokenMsg::NftInfo { token_id: token_id };
+    let wasm = WasmQuery::Smart {
+        contract_addr: token_address.to_string(),
+        msg: to_binary(&msg)?,
+    };
+
+    let token = deps.querier.query::<NftInfoResponse>(&wasm.into())?;
+
+    let nft_info = NftInfoResponse {
+        token_uri: token.token_uri,
+        rarity: token.rarity,
+        extension: TokenExtension {
+            is_locked: token.extension.is_locked,
+            unlock_date: token.extension.unlock_date
+        }
+    };
+
+    Ok(nft_info)
 }
 
 fn query_terrand(
