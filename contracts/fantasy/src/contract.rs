@@ -14,7 +14,8 @@ use cw20::{Cw20ExecuteMsg};
 use crate::error::ContractError;
 use crate::msg::{
     InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg, TerrandMsg, AnchorMsg,
-    LatestRandomResponse, ConfigResponse, StateResponse, TokenExtension
+    LatestRandomResponse, ConfigResponse, StateResponse, 
+    TokenExtension, NftInfoResponse
 };
 use crate::state::{
     ContractInfoResponse,
