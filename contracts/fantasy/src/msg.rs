@@ -118,8 +118,8 @@ pub enum QueryMsg {
     },
     /// Checks if a locked NFT can be unlocked
     CanUnlockToken {
-        /// Contract address of the Athlete Token
-        contract_addr: String,
+        /// Athlete ID of the NFT
+        athlete_id: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },

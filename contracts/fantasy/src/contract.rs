@@ -93,6 +93,10 @@ pub fn execute(
             token_id,
             duration
         } => execute_lock_token(deps, env, info, athlete_id, token_id, duration),
+        ExecuteMsg::UnlockToken {
+            athlete_id,
+            token_id,
+        } => execute_unlock_token(deps, env, info, athlete_id, token_id),
     }
 }
 
@@ -383,6 +387,9 @@ pub fn execute_lock_token(
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
+    // if info.sender != token.owner {
+    //     return Err(ContractError::Unauthorized {});
+    // }
 
     token.extension.is_locked = true;
 
@@ -407,13 +414,56 @@ pub fn execute_lock_token(
     
     Ok(Response::new()
         .add_message(WasmMsg::Execute {
-            contract_addr: token_address.clone().to_string(),
+            contract_addr: token_address.to_string(),
             msg: to_binary(&update_msg).unwrap(),
             funds: vec![],
         })
         .add_attribute("action", "lock_token")
         .add_attribute("token_id", token_id.clone())
         .add_attribute("duration", duration.clone()))
+}
+
+pub fn execute_unlock_token(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    athlete_id: String,
+    token_id: String,
+) -> Result<Response, ContractError> {
+    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+    let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
+    let curr_date = env.block.time;
+
+    // TODO: Add token ownership authentication when executing this function
+    // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
+    // if info.sender != token.owner {
+    //     return Err(ContractError::Unauthorized {});
+    // }
+
+    if !query_unlock_token(deps.as_ref(), env, athlete_id.clone(), token_id.clone())?{
+        return Err(ContractError::Locked {});
+    }
+
+    token.extension.is_locked = true;
+    token.extension.unlock_date = None;
+
+    let update_msg = TokenMsg::UpdateToken {
+        token_id: token_id.clone(),
+        token_uri: None,
+        extension: TokenExtension {
+            is_locked: token.extension.is_locked,
+            unlock_date: token.extension.unlock_date
+        }
+    };
+    
+    Ok(Response::new()
+        .add_message(WasmMsg::Execute {
+            contract_addr: token_address.to_string(),
+            msg: to_binary(&update_msg).unwrap(),
+            funds: vec![],
+        })
+        .add_attribute("action", "unlock_token")
+        .add_attribute("token_id", token_id.clone()))
 }
 
 pub fn update_last_round(
@@ -426,7 +476,7 @@ pub fn update_last_round(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
         QueryMsg::PackPrice {} => to_binary(&query_pack_price(deps)?),
@@ -442,6 +492,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PurchasedPack {
             last_round
         } => to_binary(&query_purchased_pack(deps, last_round)?),
+        QueryMsg::CanUnlockToken {
+            athlete_id,
+            token_id
+        } => to_binary(&query_unlock_token(deps, env, athlete_id, token_id)?),
     }
 }
 
@@ -530,6 +584,25 @@ fn query_token_info(
     };
 
     Ok(nft_info)
+}
+
+fn query_unlock_token(
+    deps: Deps,
+    env: Env,
+    athlete_id: String,
+    token_id: String
+) -> StdResult<bool> {
+    let token = query_token_info(deps, athlete_id.clone(), token_id.clone()).unwrap();
+    let mut can_unlock = false;
+    let curr_date = env.block.time;
+    let unlock_date = token.extension.unlock_date.unwrap_or_default();
+    let zero = Timestamp::from_nanos(0);
+
+    if curr_date.minus_seconds(unlock_date.seconds()).nanos() >= zero.nanos() {
+        can_unlock = true;
+    }
+
+    Ok(can_unlock)
 }
 
 fn query_terrand(
