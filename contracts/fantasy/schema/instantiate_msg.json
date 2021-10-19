@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "stable_denom",
+    "anchor_addr",
+    "terrand_addr",
+    "tokens",
+    "pack_len"
+  ],
+  "properties": {
+    "stable_denom": {
+      "description": "Stable coin denomination",
+      "type": "string"
+    },
+    "anchor_addr": {
+      "description": "anchor contract address for depositing the rewards",
+      "type": "string"
+    },
+    "terrand_addr": {
+      "description": "terrand contract address for calling Oracle's DRand",
+      "type": "string"
+    },
+    "tokens": {
+      "description": "athlete token data (optional)",
+      "anyOf": [
+        {
+          "$type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pack_len": {
+      "description": "Number of Player NFTs to be pulled per pack",
+      "type": "number"
+    }
+  }
+}
