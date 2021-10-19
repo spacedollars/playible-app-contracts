@@ -100,9 +100,10 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Total number of tokens issued
-    BaseTokens {},
-    SilverTokens {},
-    GoldTokens{},
+    CommonTokens {},
+    UncommonTokens {},
+    RareTokens{},
+    LegendaryTokens{},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`

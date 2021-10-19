@@ -226,9 +226,10 @@ where
                 start_after,
                 limit,
             )?),
-            QueryMsg::BaseTokens {} => to_binary(&self.num_tokens(deps, "B".to_string())?),
-            QueryMsg::SilverTokens {} => to_binary(&self.num_tokens(deps, "S".to_string())?),
-            QueryMsg::GoldTokens {} => to_binary(&self.num_tokens(deps, "G".to_string())?),
+            QueryMsg::CommonTokens {} => to_binary(&self.num_tokens(deps, "C".to_string())?),
+            QueryMsg::UncommonTokens {} => to_binary(&self.num_tokens(deps, "U".to_string())?),
+            QueryMsg::RareTokens {} => to_binary(&self.num_tokens(deps, "R".to_string())?),
+            QueryMsg::LegendaryTokens {} => to_binary(&self.num_tokens(deps, "L".to_string())?),
             QueryMsg::Tokens {
                 owner,
                 start_after,
