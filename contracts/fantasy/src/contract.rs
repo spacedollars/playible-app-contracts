@@ -449,7 +449,7 @@ pub fn execute_unlock_token(
         return Err(ContractError::Locked {});
     }
 
-    token.extension.is_locked = true;
+    token.extension.is_locked = false;
     token.extension.unlock_date = None;
 
     let update_msg = TokenMsg::UpdateToken {
