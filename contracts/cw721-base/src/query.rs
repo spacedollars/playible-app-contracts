@@ -28,12 +28,14 @@ where
     fn num_tokens(&self, deps: Deps, rank: String) -> StdResult<NumTokensResponse> {
         let mut count: u64 = 0;
 
-        if rank.eq("S"){
-            count = self.silver_count(deps.storage)?;
-        } else if rank.eq("G"){
-            count = self.gold_count(deps.storage)?;
+        if rank.eq("U"){
+            count = self.uncommon_count(deps.storage)?;
+        } else if rank.eq("R"){
+            count = self.rare_count(deps.storage)?;
+        } else if rank.eq("L"){
+            count = self.legendary_count(deps.storage)?;
         } else  {
-            count = self.base_count(deps.storage)?;
+            count = self.common_count(deps.storage)?;
         }
 
         Ok(NumTokensResponse { count })
@@ -170,16 +172,20 @@ where
         let token_count = self.num_tokens(deps, rank.clone()).unwrap();
         let mut is_mintable = true;
     
-        if rank.eq("S"){
-            if token_count.count == contract_info.silver_cap {
+        if rank.eq("U"){
+            if token_count.count == contract_info.uncommon_cap {
                 is_mintable = false
             }
-        } else if rank.eq("G"){
-            if token_count.count == contract_info.gold_cap {
+        } else if rank.eq("R"){
+            if token_count.count == contract_info.rare_cap {
+                is_mintable = false
+            }
+        } else if rank.eq("L"){
+            if token_count.count == contract_info.legendary_cap {
                 is_mintable = false
             }
         } else  {
-            if token_count.count == contract_info.base_cap {
+            if token_count.count == contract_info.common_cap {
                 is_mintable = false
             }
         }

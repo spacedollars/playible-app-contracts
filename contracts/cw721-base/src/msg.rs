@@ -14,12 +14,11 @@ pub struct InstantiateMsg {
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
-    // Maximum number of base tokens
-    pub base_cap: u64,
-    // Maximum number of silver tokens
-    pub silver_cap: u64,
-    // Maximum number of gold tokens
-    pub gold_cap: u64,
+    // Maximum number of each rarity
+    pub common_cap: u64,
+    pub uncommon_cap: u64,
+    pub rare_cap: u64,
+    pub legendary_cap: u64,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner

@@ -31,9 +31,10 @@ where
         let info = ContractInfoResponse {
             name: msg.name,
             symbol: msg.symbol,
-            base_cap: msg.base_cap,
-            silver_cap: msg.silver_cap,
-            gold_cap: msg.gold_cap,
+            common_cap: msg.common_cap,
+            uncommon_cap: msg.uncommon_cap,
+            rare_cap: msg.rare_cap,
+            legendary_cap: msg.legendary_cap,
         };
         self.contract_info.save(deps.storage, &info)?;
         let minter = deps.api.addr_validate(&msg.minter)?;
@@ -125,12 +126,14 @@ where
                 None => Ok(token),
             })?;
 
-        if rank_copy_3.eq("S"){
-            self.increment_silver_tokens(deps.storage)?;
-        } else if rank_copy_3.eq("G"){
-            self.increment_gold_tokens(deps.storage)?;
+        if rank_copy_3.eq("U"){
+            self.increment_uncommon_tokens(deps.storage)?;
+        } else if rank_copy_3.eq("R"){
+            self.increment_rare_tokens(deps.storage)?;
+        } else if rank_copy_3.eq("L"){
+            self.increment_legendary_tokens(deps.storage)?;
         } else  {
-            self.increment_base_tokens(deps.storage)?;
+            self.increment_common_tokens(deps.storage)?;
         }
 
         Ok(Response::new()
@@ -144,7 +147,7 @@ where
         &self,
         deps: DepsMut,
         _env: Env,
-        info: MessageInfo,
+        _info: MessageInfo,
         token_id: String,
         token_uri: Option<String>,  
         extension: Option<T>
@@ -173,11 +176,13 @@ where
 
         let token_count = self.num_tokens(deps, rank.clone()).unwrap().count + 1;
         
-        let mut rank_string: &str = "B";
-        if rank.eq("S"){
-            rank_string = "S"; 
-        } else if rank.eq("G"){
-            rank_string = "G";
+        let mut rank_string: &str = "C";
+        if rank.eq("U"){
+            rank_string = "U"; 
+        } else if rank.eq("R"){
+            rank_string = "R";
+        } else if rank.eq("L"){
+            rank_string = "L";
         } 
 
         token_id.push_str(rank_string);

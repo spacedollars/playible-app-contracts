@@ -89,9 +89,10 @@ pub struct ContractInfoResponse {
     pub name: String,
     pub symbol: String,
     /// cap is the maximum number of tokens that could be minted
-    pub base_cap: u64,
-    pub silver_cap: u64,
-    pub gold_cap: u64,
+    pub common_cap: u64,
+    pub uncommon_cap: u64,
+    pub rare_cap: u64,
+    pub legendary_cap: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
