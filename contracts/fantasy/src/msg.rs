@@ -19,6 +19,16 @@ pub struct InstantiateMsg {
     pub pack_price: u64,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct NftInfoResponse {
+    /// Universal Resource Identifier link of the NFT
+    pub token_uri: Option<String>,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
+    /// Additional Metadata of Fantasy Athlete tokens
+    pub extension: Extension,
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct TokenExtension {
     /// Determines whether or not the NFT is locked for Fantasy Sports
@@ -124,7 +134,7 @@ pub enum TokenMsg {
     Mint {
         /// The owner of the newly minter NFT
         owner: String,
-        /// URI link of the NFT image
+        /// Universal Resource Identifier link of the NFT
         token_uri: Option<String>,
         /// Describes the rarity of the NFT 
         rarity: String,
@@ -144,8 +154,6 @@ pub enum TokenMsg {
         minter: String,
     },
     NftInfo {
-        /// Contract address of the NFT
-        contract_addr: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },
