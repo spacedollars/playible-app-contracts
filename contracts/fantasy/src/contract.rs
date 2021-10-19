@@ -410,7 +410,7 @@ pub fn execute_lock_token(
 
     let update_msg = TokenMsg::UpdateToken {
         token_id: token_id.clone(),
-        token_uri: None,
+        token_uri: token.token_uri,
         extension: TokenExtension {
             is_locked: token.extension.is_locked,
             unlock_date: token.extension.unlock_date
@@ -454,7 +454,7 @@ pub fn execute_unlock_token(
 
     let update_msg = TokenMsg::UpdateToken {
         token_id: token_id.clone(),
-        token_uri: None,
+        token_uri: token.token_uri,
         extension: TokenExtension {
             is_locked: token.extension.is_locked,
             unlock_date: token.extension.unlock_date
