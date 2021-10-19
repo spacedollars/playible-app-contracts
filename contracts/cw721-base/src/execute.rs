@@ -77,6 +77,9 @@ where
                 token_uri,
                 extension,
             } => self.update_token(deps, env, info, token_id, token_uri, extension),
+            ExecuteMsg::UpdateMinter {
+                minter,
+            } => self.update_minter(deps, info, minter),
         }
     }
 }
@@ -95,10 +98,10 @@ where
         msg: MintMsg<T>,
     ) -> Result<Response<C>, ContractError> {
         let minter = self.minter.load(deps.storage)?;
-        let rank_copy_1 = msg.rank.clone();
-        let rank_copy_2 = msg.rank.clone();
-        let rank_copy_3 = msg.rank.clone();
-        let rank_copy_4 = msg.rank.clone();
+        let rarity_copy_1 = msg.rarity.clone();
+        let rarity_copy_2 = msg.rarity.clone();
+        let rarity_copy_3 = msg.rarity.clone();
+        let rarity_copy_4 = msg.rarity.clone();
 
         if info.sender != minter {
             return Err(ContractError::Unauthorized {});
@@ -109,16 +112,17 @@ where
             owner: deps.api.addr_validate(&msg.owner)?,
             approvals: vec![],
             token_uri: msg.token_uri,
+            rarity: msg.rarity,
             extension: msg.extension,
         };
 
         // check if the token is mintable according to the listed cap
-        if !self.query_mintable(deps.as_ref(), rank_copy_1).unwrap() {
+        if !self.query_mintable(deps.as_ref(), rarity_copy_1).unwrap() {
             return Err(ContractError::Capped {})
         }
 
-        // generate a token id based on rank
-        let token_id = self.generate_token_id(deps.as_ref(), rank_copy_2).unwrap();
+        // generate a token id based on rarity
+        let token_id = self.generate_token_id(deps.as_ref(), rarity_copy_2).unwrap();
 
         self.tokens
             .update(deps.storage, &token_id, |old| match old {
@@ -126,11 +130,11 @@ where
                 None => Ok(token),
             })?;
 
-        if rank_copy_3.eq("U"){
+        if rarity_copy_3.eq("U"){
             self.increment_uncommon_tokens(deps.storage)?;
-        } else if rank_copy_3.eq("R"){
+        } else if rarity_copy_3.eq("R"){
             self.increment_rare_tokens(deps.storage)?;
-        } else if rank_copy_3.eq("L"){
+        } else if rarity_copy_3.eq("L"){
             self.increment_legendary_tokens(deps.storage)?;
         } else  {
             self.increment_common_tokens(deps.storage)?;
@@ -140,7 +144,7 @@ where
             .add_attribute("action", "mint")
             .add_attribute("minter", info.sender)
             .add_attribute("token_id", token_id.clone())
-            .add_attribute("rank", rank_copy_4))
+            .add_attribute("rarity", rarity_copy_4))
     }
 
     pub fn update_token(
@@ -164,28 +168,50 @@ where
             .add_attribute("token_id", token_id.clone()))
     }
 
-    // returns a string containing contract symbol + token rank + token count
+    pub fn update_minter(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        minter: String,
+    ) -> Result<Response<C>, ContractError> {
+        let prev_minter = self.minter.load(deps.storage)?;
+        let sender_raw = info.sender;
+    
+        if sender_raw != prev_minter {
+            return Err(ContractError::Unauthorized {});
+        }
+    
+        let new_minter = deps.api.addr_validate(&minter)?;
+        self.minter.save(deps.storage, &new_minter)?;
+    
+        Ok(Response::new()
+            .add_attribute("action", "update_minter")
+            .add_attribute("prev_minter", prev_minter)
+            .add_attribute("new_minter", minter))
+    }
+
+    // returns a string containing contract symbol + token rarity + token count
     fn generate_token_id (
         &self,
         deps: Deps,
-        rank: String,
+        rarity: String,
     ) -> StdResult<String> {
 
         let contract_info = self.contract_info(deps).unwrap();
         let mut token_id: String = contract_info.symbol.to_owned();
 
-        let token_count = self.num_tokens(deps, rank.clone()).unwrap().count + 1;
+        let token_count = self.num_tokens(deps, rarity.clone()).unwrap().count + 1;
         
-        let mut rank_string: &str = "C";
-        if rank.eq("U"){
-            rank_string = "U"; 
-        } else if rank.eq("R"){
-            rank_string = "R";
-        } else if rank.eq("L"){
-            rank_string = "L";
+        let mut rarity_string: &str = "C";
+        if rarity.eq("U"){
+            rarity_string = "U"; 
+        } else if rarity.eq("R"){
+            rarity_string = "R";
+        } else if rarity.eq("L"){
+            rarity_string = "L";
         } 
 
-        token_id.push_str(rank_string);
+        token_id.push_str(rarity_string);
         token_id.push_str(&token_count.to_string());
 
         Ok(token_id)

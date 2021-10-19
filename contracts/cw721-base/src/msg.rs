@@ -61,7 +61,12 @@ pub enum ExecuteMsg<T> {
         token_id: String,
         token_uri: Option<String>,
         extension: Option<T>
-    }
+    },
+    /// Change the minter for the token, can only be called by the current minter
+    UpdateMinter {
+        /// Address of the new minter
+        minter: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -74,8 +79,8 @@ pub struct MintMsg<T> {
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
-    /// Describes the rank of the NFT 
-    pub rank: String,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
     /// Any custom extension used by this contract
     pub extension: T,
 }
@@ -143,7 +148,7 @@ pub enum QueryMsg {
     Minter {},
     /// Returns a boolean determining if the token is mintable
     IsMintable {
-        rank: String,
+        rarity: String,
     },
 }
 

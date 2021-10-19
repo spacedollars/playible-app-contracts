@@ -101,6 +101,8 @@ pub struct NftInfoResponse<T> {
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
     /// You can add any custom metadata here when you extend cw721-base
     pub extension: T,
 }

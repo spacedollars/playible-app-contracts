@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, CanonicalAddr, Uint128};
+use cosmwasm_std::{Binary, CanonicalAddr, Uint128, Timestamp};
 use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,9 +19,21 @@ pub struct InstantiateMsg {
     pub pack_price: u64,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
+pub struct TokenExtension {
+    /// Determines whether or not the NFT is locked for Fantasy Sports
+    pub is_locked: bool,
+    /// Determines the unlock date after the NFT has been locked
+    pub unlock_date: Option<Timestamp>,
+}
+
+pub type Extension = Option<TokenExtension>;
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    /// For testing stuff
+    Test {}, 
     /// Purchase an athlete token pack
     PurchasePack {},
     /// Deposit Stablecoins into the contract to receive an athlete token
@@ -44,8 +56,31 @@ pub enum ExecuteMsg {
     TokenTurnover {
         new_contract: String
     },
-    /// For testing stuff
-    Test {}, 
+    /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
+    LockToken {
+        /// Contract address of the Athlete Token
+        contract_addr: String,
+        /// Unique ID of the NFT
+        token_id: String,
+        /// Time before a token can be unlocked
+        duration: String,
+    },
+    /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
+    UnlockToken {
+        /// Contract address of the Athlete Token
+        contract_addr: String,
+        /// Unique ID of the NFT
+        token_id: String,
+    },
+    /// Exchanges NFTs for a higher rarity token
+    UpgradeToken {
+        /// Contract address of the Athlete Token
+        contract_addr: String,
+        /// Describes the rarity of the NFT 
+        rarity: String,
+        /// NFTs to burn
+        tokens: Vec<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -73,29 +108,50 @@ pub enum QueryMsg {
     PurchasedPack {
         last_round: String
     },
+    /// Checks if a locked NFT can be unlocked
+    CanUnlockToken {
+        /// Contract address of the Athlete Token
+        contract_addr: String,
+        /// Token ID of the NFT to be queried
+        token_id: String,
+    },
 }
 
-/// Athlete Token Message
+/// CW721 Contract Messages
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenMsg {
     Mint {
         /// The owner of the newly minter NFT
         owner: String,
-        /// Describes the rank of the NFT 
-        rank: String,
-        /// Describes the type of minting to be used
-        mint_type: String,
-        /// last_round used for minting
-        last_round: Option<String>
+        /// URI link of the NFT image
+        token_uri: Option<String>,
+        /// Describes the rarity of the NFT 
+        rarity: String,
+        /// Additional Metadata of Fantasy Athlete tokens
+        extension: Extension
+    },
+    UpdateToken {
+        /// Token ID of the NFT to be updated
+        token_id: String,
+        /// URI link of the NFT image
+        token_uri: Option<String>,
+        /// Additional Metadata of Fantasy Athlete tokens
+        extension: Extension
     },
     UpdateMinter {
         /// Address of the new minter
         minter: String,
     },
+    NftInfo {
+        /// Contract address of the NFT
+        contract_addr: String,
+        /// Token ID of the NFT to be queried
+        token_id: String,
+    },
     IsMintable {
-        /// Describes the rank of the NFT 
-        rank: String,
+        /// Describes the rarity of the NFT 
+        rarity: String,
     },
 }
 

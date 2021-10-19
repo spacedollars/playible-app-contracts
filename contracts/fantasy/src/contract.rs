@@ -14,7 +14,7 @@ use cw20::{Cw20ExecuteMsg};
 use crate::error::ContractError;
 use crate::msg::{
     InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg, TerrandMsg, AnchorMsg,
-    LatestRandomResponse, ConfigResponse, StateResponse,
+    LatestRandomResponse, ConfigResponse, StateResponse, TokenExtension
 };
 use crate::state::{
     ContractInfoResponse,
@@ -132,14 +132,14 @@ pub fn execute_purchase(
 
     // Generate the list of athlete IDs to be minted
     // let hex_list = query_terrand(deps, env, pack_len).unwrap();
-    /*
-    let hex_list = match query_terrand(deps.branch(), env, pack_len) {
-        Ok(list) => list,
-        Err(error) => return Err(ContractError::Std(error)),
-    };
-    let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
-    let last_round = query_last_round(deps.branch().as_ref()).unwrap();
-    */
+    // 
+    // let hex_list = match query_terrand(deps.branch(), env, pack_len) {
+    //     Ok(list) => list,
+    //     Err(error) => return Err(ContractError::Std(error)),
+    // };
+    // let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
+    // let last_round = query_last_round(deps.branch().as_ref()).unwrap();
+    
     let mint_index_list = [0, 0, 0, 0, 0];
     let last_round = 420;
     let mut response = Response::new()
@@ -152,9 +152,12 @@ pub fn execute_purchase(
         
         let mint_msg = TokenMsg::Mint {
             owner: sender.clone().to_string(),
-            rank: "B".to_string(),
-            mint_type: "pack".to_string(),
-            last_round: Some(last_round.to_string()),
+            token_uri: None,
+            rarity: "C".to_string(),
+            extension: Some(TokenExtension{
+                is_locked: false,
+                unlock_date: None
+            })
         };
 
         response = response.add_message(WasmMsg::Execute {
@@ -438,7 +441,7 @@ fn query_token_mintable(
     let token_address = query_token_address(deps, athlete_id).unwrap();
 
     // Query token_address if mintable using the NFT contract's IsMintable{} query
-    let msg = TokenMsg::IsMintable { rank: "B".to_string() };
+    let msg = TokenMsg::IsMintable { rarity: "C".to_string() };
     let wasm = WasmQuery::Smart {
         contract_addr: token_address.to_string(),
         msg: to_binary(&msg)?,

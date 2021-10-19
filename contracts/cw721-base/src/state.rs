@@ -130,12 +130,12 @@ pub struct TokenInfo<T> {
     pub owner: Addr,
     /// Approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     pub approvals: Vec<Approval>,
-
     /// Universal resource identifier for this NFT
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
-
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
     /// You can add any custom metadata here when you extend cw721-base
     pub extension: T,
 }
