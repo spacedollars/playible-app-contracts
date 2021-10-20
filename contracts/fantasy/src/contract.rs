@@ -134,22 +134,20 @@ pub fn execute_purchase(
     {
         return Err(ContractError::WrongAmount{amount:contract_info.pack_price, denom:contract_info.stable_denom})
     }
-
-    // Load pack_len from the state
-    let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
+    
+    // Generate a list of mintable tokens
     let token_count = query_token_count(deps.as_ref()).unwrap();
-   
     let mut mintable_token_list = vec![];
-
     for n in 0..token_count {
         if query_token_mintable(deps.as_ref(), n.to_string(), "C".to_string()).unwrap_or(false){    
-                // Add athlete_id to the mintable list
-                // Increment mintable tokens
-                mintable_token_list.push(n);
+            // Add athlete_id to the mintable list
+            // Increment mintable tokens
+            mintable_token_list.push(n);
         }
     }
 
     // Generate the list of athlete IDs to be minted
+    // let pack_len = query_contract_info(deps.as_ref()).unwrap().pack_len;
     // let hex_list = query_terrand(deps, env, pack_len).unwrap();
     // 
     // let hex_list = match query_terrand(deps.branch(), env, pack_len) {
@@ -194,7 +192,7 @@ pub fn execute_purchase(
         )?;*/
 
         // TODO: handle error from mint_res
-        //response = response.add_message(mint_res);
+        // response = response.add_message(mint_res);
     }
     response = response.add_attribute("last_round", last_round.to_string());
     
@@ -546,14 +544,14 @@ pub fn execute_upgrade_rand_token(
         });
     }
 
-    // Create list of mintable tokens
+    // Generate a list of mintable tokens
     let token_count = query_token_count(deps.as_ref()).unwrap();
     let mut mintable_list = vec![];
     for n in 0..token_count {
         if query_token_mintable(deps.as_ref(), n.to_string(), rarity.clone()).unwrap_or(false){    
-                // Add athlete_id to the mintable list
-                // Increment mintable tokens
-                mintable_list.push(n);
+            // Add athlete_id to the mintable list
+            // Increment mintable tokens
+            mintable_list.push(n);
         }
     }
 
