@@ -1,4 +1,4 @@
-use cosmwasm_bignumber::{Decimal256};
+// use cosmwasm_bignumber::{Decimal256};
 use cosmwasm_std::{
     Decimal, Deps, Coin, StdResult, Uint128,
 };
@@ -14,12 +14,12 @@ pub fn compute_tax(
     let tax_cap = Uint128::from((terra_querier.query_tax_cap(coin.denom.to_string())?).cap);
 
     //TODO: Declare this as a static variable, which is incredibly difficult to do for some reason
-    let DECIMAL_FRACTION: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
+    let decimal_fraction: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
 
     Ok(std::cmp::min(
         (coin.amount.checked_sub(coin.amount.multiply_ratio(
-            DECIMAL_FRACTION,
-            DECIMAL_FRACTION * tax_rate + DECIMAL_FRACTION,
+            decimal_fraction,
+            decimal_fraction * tax_rate + decimal_fraction,
         )))?,
         tax_cap,
     ))
@@ -39,13 +39,13 @@ pub fn compute_price_with_tax(
     let tax_cap = Uint128::from((terra_querier.query_tax_cap(coin.denom.to_string())?).cap);
 
     //TODO: Declare this as a static variable, which is incredibly difficult to do for some reason
-    let DECIMAL_FRACTION: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
+    let decimal_fraction: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
     
     //let amount = Uint128::from(coin.amount);
     Ok(std::cmp::min(
         (coin.amount.checked_sub(coin.amount.multiply_ratio(
-            DECIMAL_FRACTION,
-            DECIMAL_FRACTION * tax_rate + DECIMAL_FRACTION,
+            decimal_fraction,
+            decimal_fraction * tax_rate + decimal_fraction,
         )))?,
         tax_cap,
     ))

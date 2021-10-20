@@ -27,7 +27,6 @@ pub const PACK_LEN: Item<u64>  = Item::new("pack_len");
 pub const TOKEN_COUNT: Item<u64>  = Item::new("token_count");
 pub const LAST_ROUND: Item<u64>  = Item::new("last_round");
 pub const TOKEN_ADDRESSES_PREFIX: &[u8] = b"token_addresses";
-pub const PURCHASED_PACK_PREFIX: &[u8] = b"purchased_pack";
 
 pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
     Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())
@@ -61,12 +60,4 @@ pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<Addr> {
 
 pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<Addr> {
     bucket_read(storage, TOKEN_ADDRESSES_PREFIX)
-}
-
-pub fn purchased_pack(storage: &mut dyn Storage) -> Bucket<Vec<String>> {
-    bucket(storage, PURCHASED_PACK_PREFIX)
-}
-
-pub fn purchased_pack_read(storage: &dyn Storage) -> ReadonlyBucket<Vec<String>> {
-    bucket_read(storage, PURCHASED_PACK_PREFIX)
 }

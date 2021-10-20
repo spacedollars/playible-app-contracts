@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Addr, Coin, Uint128, Timestamp
 };
 use cosmwasm_storage::to_length_prefixed;
-use cosmwasm_bignumber::{Decimal256};
+// use cosmwasm_bignumber::{Decimal256};
 
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg};
@@ -23,7 +23,6 @@ use crate::state::{
     total_deposit, increase_deposit,
     token_count, increment_token_count,
     token_addresses, token_addresses_read,
-    purchased_pack, purchased_pack_read
 };
 use crate::helpers::{
     encode_msg_execute,
@@ -81,10 +80,6 @@ pub fn execute(
         ExecuteMsg::AddToken {
             token
         } => execute_add_token(deps, env, token),
-        ExecuteMsg::AddPurchasedToken {
-            last_round,
-            token_id
-        } => execute_add_purchased_token(deps, env, last_round, token_id),
         ExecuteMsg::TokenTurnover {
             new_contract
         } => execute_token_turnover(deps, env, new_contract),
@@ -124,7 +119,7 @@ pub fn execute_test(
 
 pub fn execute_purchase(
     mut deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo, 
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
@@ -261,7 +256,7 @@ pub fn execute_redeem(
     )?;
 
     //TODO: Declare this as a static variable, which is incredibly difficult to do for some reason
-    let DECIMAL_FRACTION: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
+    let decimal_fraction: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
 
     // transform binary response to state response
     let state_response: StateResponse = from_binary(&state_bin)?;
@@ -269,8 +264,8 @@ pub fn execute_redeem(
 
     let contract_msg = to_binary(&AnchorMsg::RedeemStable{})?;
     let aust_amount = amount.multiply_ratio(
-        DECIMAL_FRACTION,
-        DECIMAL_FRACTION * exchange_rate + DECIMAL_FRACTION
+        decimal_fraction,
+        decimal_fraction * exchange_rate + decimal_fraction
     );
 
     // get anchor usd (aust) contract address from anchor config
@@ -327,37 +322,6 @@ pub fn execute_add_token(
     )
 }
 
-pub fn execute_add_purchased_token(
-    deps: DepsMut,
-    _env: Env,
-    last_round: String,
-    token_id: String,
-) -> Result<Response, ContractError> { 
-
-    let mut pack = query_purchased_pack(deps.as_ref(), last_round.clone())?.unwrap_or_default();
- 
-    purchased_pack(deps.storage).update::<_, ContractError>(&last_round.as_bytes(), |old| match old {
-        // If last_round key exists within the storage
-        Some(_) => {
-            // Load purchased_pack then push the new token_ids
-            pack.push(token_id.clone());
-            Ok(pack)
-        },
-        // If last_round key has not been used  
-        None => {
-            // Create new Vec<String> and then assign to key
-            let mut new_pack: Vec<String> = Vec::new();
-            new_pack.push(token_id.clone());
-            Ok(new_pack)
-        },
-    })?;
-
-    Ok(Response::new()
-        .add_attribute("action", "add_purchased_token")
-        .add_attribute("last_round", &last_round)
-        .add_attribute("token_id", &token_id))
-}
-
 pub fn execute_token_turnover(
     deps: DepsMut,
     env: Env,
@@ -393,7 +357,7 @@ pub fn execute_token_turnover(
 pub fn execute_lock_token(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     athlete_id: String,
     token_id: String,
     duration: String
@@ -443,13 +407,12 @@ pub fn execute_lock_token(
 pub fn execute_unlock_token(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     athlete_id: String,
     token_id: String,
 ) -> Result<Response, ContractError> {
     let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
     let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
-    let curr_date = env.block.time;
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
@@ -488,7 +451,7 @@ pub fn execute_upgrade_same_token(
     env: Env,
     info: MessageInfo,
     rarity: String,
-    athlete_id: String,
+    athlete_id: String, 
     tokens: Vec<String>
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
@@ -543,7 +506,7 @@ pub fn execute_upgrade_rand_token(
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
 
-    let mut token_address: Vec<String>;
+    let mut token_address: Vec<String> = vec![];
     for id in athlete_id.iter() {
         let addr = query_token_address(deps.as_ref(), id.to_string()).unwrap().to_string();
         token_address.push(addr)
@@ -610,9 +573,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&query_token_mintable(deps, athlete_id)?),
         QueryMsg::TokenCount {} => to_binary(&query_token_count(deps)?),
         QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
-        QueryMsg::PurchasedPack {
-            last_round
-        } => to_binary(&query_purchased_pack(deps, last_round)?),
         QueryMsg::CanUnlockToken {
             athlete_id,
             token_id
@@ -653,13 +613,6 @@ fn query_token_address(
     athlete_id: String
 ) -> StdResult<Addr> {
     token_addresses_read(deps.storage).load(athlete_id.as_bytes())
-}
-
-fn query_purchased_pack(
-    deps: Deps,
-    last_round: String
-) -> StdResult<Option<Vec<String>>> {
-    purchased_pack_read(deps.storage).may_load(last_round.as_bytes())
 }
 
 fn query_token_mintable(
@@ -725,7 +678,7 @@ fn query_unlock_token(
     Ok(can_unlock)
 }
 
-fn query_terrand(
+fn _query_terrand(
     deps: DepsMut,
     env: Env,
     count: u64
