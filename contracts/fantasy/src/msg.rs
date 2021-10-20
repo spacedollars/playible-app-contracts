@@ -45,7 +45,9 @@ pub enum ExecuteMsg {
     /// For testing stuff
     Test {}, 
     /// Purchase an athlete token pack
-    PurchasePack {},
+    PurchasePack {
+        rand_seed: String,
+    },
     /// Deposit Stablecoins into the contract to receive an athlete token
     DepositStable {},
     /// Redeem Stablecoins (UST) from Anchor

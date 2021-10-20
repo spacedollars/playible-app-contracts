@@ -72,7 +72,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Test {} => execute_test(deps, env),
-        ExecuteMsg::PurchasePack {} => execute_purchase(deps, env, info),
+        ExecuteMsg::PurchasePack {
+            rand_seed
+        } => execute_purchase(deps, env, info, rand_seed),
         ExecuteMsg::DepositStable {} => execute_deposit(deps, env, info),
         ExecuteMsg::RedeemStable {
             amount,
@@ -121,6 +123,7 @@ pub fn execute_purchase(
     mut deps: DepsMut,
     _env: Env,
     info: MessageInfo, 
+    rand_seed: String
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
     let contract_info = query_contract_info(deps.as_ref()).unwrap();
@@ -153,10 +156,10 @@ pub fn execute_purchase(
     //     Ok(list) => list,
     //     Err(error) => return Err(ContractError::Std(error)),
     // };
-    // let mint_index_list = hex_to_athlete(deps.branch().as_ref(), hex_list.clone()).unwrap();
     // let last_round = query_last_round(deps.branch().as_ref()).unwrap();
     
-    let mint_index_list = [0, 0, 0, 0, 0];
+    //let mint_index_list = [0, 0, 0, 0, 0];
+    let mint_index_list = hex_to_athlete(deps.branch().as_ref(), rand_seed.clone()).unwrap();
     let last_round = 420;
     let mut response = Response::new()
         .add_attribute("action", "purchase")
