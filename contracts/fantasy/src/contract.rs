@@ -97,11 +97,17 @@ pub fn execute(
             athlete_id,
             token_id,
         } => execute_unlock_token(deps, env, info, athlete_id, token_id),
-        ExecuteMsg::UpgradeToken {
-            athlete_id,
+        ExecuteMsg::UpgradeSameToken {
             rarity,
+            athlete_id,
             tokens
-        } => execute_upgrade_token(deps, env, info, athlete_id, rarity, tokens),
+        } => execute_upgrade_same_token(deps, env, info, rarity, athlete_id, tokens),
+        ExecuteMsg::UpgradeRandToken {
+            rarity,
+            athlete_ids,
+            tokens,
+            rand_seed
+        } => execute_upgrade_rand_token(deps, env, info, rarity, athlete_ids, tokens, rand_seed),
     }
 }
 
@@ -471,19 +477,19 @@ pub fn execute_unlock_token(
         .add_attribute("token_id", token_id.clone()))
 }
 
-pub fn execute_upgrade_token(
+pub fn execute_upgrade_same_token(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    athlete_id: String,
     rarity: String,
+    athlete_id: String,
     tokens: Vec<String>
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
     let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
 
     let mut response = Response::new()
-        .add_attribute("action", "upgrade_token")
+        .add_attribute("action", "upgrade_same_token")
         .add_attribute("from", sender.clone());
 
     // Burn fodder tokens
@@ -516,6 +522,61 @@ pub fn execute_upgrade_token(
         msg: to_binary(&mint_msg).unwrap(),
         funds: vec![],
     });
+    
+    Ok(response)
+}
+
+pub fn execute_upgrade_rand_token(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    rarity: String,
+    athlete_id: Vec<String>,
+    tokens: Vec<String>,
+    rand_seed: String
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
+
+    let mut token_address: Vec<String>;
+    for id in athlete_id.iter() {
+        let addr = query_token_address(deps.as_ref(), id.to_string()).unwrap().to_string();
+        token_address.push(addr)
+    }
+
+    let mut response = Response::new()
+        .add_attribute("action", "upgrade_rand_token")
+        .add_attribute("from", sender.clone());
+    
+    // Burn fodder tokens
+    for index in 0..2 {
+        let burn_msg = TokenMsg::TransferNft {
+            recipient: env.contract.address.to_string(),
+            token_id: tokens[index].clone()
+        };
+
+        response = response.add_message(WasmMsg::Execute {
+            contract_addr: token_address[index].to_string(),
+            msg: to_binary(&burn_msg).unwrap(),
+            funds: vec![],
+        });
+    }
+    
+    // Mint higher rarity token
+    let mint_msg = TokenMsg::Mint {
+        owner: sender.clone().to_string(),
+        token_uri: None,
+        rarity: rarity,
+        extension: TokenExtension {
+            is_locked: false,
+            unlock_date: None
+        }
+    };
+
+    // response = response.add_message(WasmMsg::Execute {
+    //     contract_addr: token_address.clone().to_string(),
+    //     msg: to_binary(&mint_msg).unwrap(),
+    //     funds: vec![],
+    // });
     
     Ok(response)
 }

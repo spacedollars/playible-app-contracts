@@ -80,14 +80,25 @@ pub enum ExecuteMsg {
         /// Unique ID of the NFT
         token_id: String,
     },
-    /// Exchanges NFTs for a higher rarity token
-    UpgradeToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
+    /// Exchanges an Athlete token with the same rarity for a higher rarity token
+    UpgradeSameToken {
         /// Describes the rarity of the NFT 
         rarity: String,
+        /// Athlete ID of the NFTs to be burned
+        athlete_id: String,
         /// NFTs to burn
         tokens: Vec<String>,
+    },
+    /// Exchanges any Athlete tokens of the same rarity for a random higher rarity token
+    UpgradeRandToken {
+        /// Describes the rarity of the NFT 
+        rarity: String,
+        /// Athlete IDs of the NFTs to be burned
+        athlete_ids: Vec<String>,
+        /// NFTs to burn
+        tokens: Vec<String>,
+        /// Seed to be used for minting a random new token
+        rand_seed: String
     },
 }
 
