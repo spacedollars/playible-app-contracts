@@ -161,7 +161,8 @@ pub fn execute_purchase(
     let mut response = Response::new()
         .add_attribute("action", "purchase")
         .add_attribute("from", &sender);
-
+    
+    // Default NFT rarity is Common
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
         let token_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
@@ -172,7 +173,8 @@ pub fn execute_purchase(
             rarity: "C".to_string(),
             extension: TokenExtension {
                 is_locked: false,
-                unlock_date: None
+                unlock_date: None,
+                usage: 3,
             }
         };
 
@@ -364,7 +366,6 @@ pub fn execute_lock_token(
 ) -> Result<Response, ContractError> {
     let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
     let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
-    let curr_date = env.block.time;
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
@@ -372,8 +373,11 @@ pub fn execute_lock_token(
     //     return Err(ContractError::Unauthorized {});
     // }
 
-    token.extension.is_locked = true;
+    if !query_use_token(deps.as_ref(), athlete_id.clone(), token_id.clone())?{
+        return Err(ContractError::UsageCapped {});
+    }
 
+    let curr_date = env.block.time;
     if duration.clone().eq("hour"){
         token.extension.unlock_date = Some(curr_date.plus_seconds(3_600));
     } else if duration.clone().eq("day"){
@@ -388,8 +392,9 @@ pub fn execute_lock_token(
         token_id: token_id.clone(),
         token_uri: token.token_uri,
         extension: TokenExtension {
-            is_locked: token.extension.is_locked,
-            unlock_date: token.extension.unlock_date
+            is_locked: true,
+            unlock_date: token.extension.unlock_date,
+            usage: token.extension.usage - 1
         }
     };
     
@@ -412,7 +417,7 @@ pub fn execute_unlock_token(
     token_id: String,
 ) -> Result<Response, ContractError> {
     let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
-    let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
+    let token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
@@ -424,15 +429,13 @@ pub fn execute_unlock_token(
         return Err(ContractError::Locked {});
     }
 
-    token.extension.is_locked = false;
-    token.extension.unlock_date = None;
-
     let update_msg = TokenMsg::UpdateToken {
         token_id: token_id.clone(),
         token_uri: token.token_uri,
         extension: TokenExtension {
-            is_locked: token.extension.is_locked,
-            unlock_date: token.extension.unlock_date
+            is_locked: false,
+            unlock_date: None,
+            usage: token.extension.usage
         }
     };
     
@@ -474,6 +477,15 @@ pub fn execute_upgrade_same_token(
             funds: vec![],
         });
     }
+
+    let mut usage_cap = 3;
+    if rarity.eq("U"){
+        usage_cap = 5;
+    } else if rarity.eq("R"){
+        usage_cap = 10;
+    } else if rarity.eq("L"){
+        usage_cap = 999_999_999;
+    }
     
     // Mint higher rarity token
     let mint_msg = TokenMsg::Mint {
@@ -482,7 +494,8 @@ pub fn execute_upgrade_same_token(
         rarity: rarity,
         extension: TokenExtension {
             is_locked: false,
-            unlock_date: None
+            unlock_date: None,
+            usage: usage_cap,
         }
     };
 
@@ -529,6 +542,15 @@ pub fn execute_upgrade_rand_token(
             funds: vec![],
         });
     }
+
+    let mut usage_cap = 3;
+    if rarity.eq("U"){
+        usage_cap = 5;
+    } else if rarity.eq("R"){
+        usage_cap = 10;
+    } else if rarity.eq("L"){
+        usage_cap = 999_999_999;
+    }
     
     // Mint higher rarity token
     let mint_msg = TokenMsg::Mint {
@@ -537,7 +559,8 @@ pub fn execute_upgrade_rand_token(
         rarity: rarity,
         extension: TokenExtension {
             is_locked: false,
-            unlock_date: None
+            unlock_date: None,
+            usage: usage_cap,
         }
     };
 
@@ -577,6 +600,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             athlete_id,
             token_id
         } => to_binary(&query_unlock_token(deps, env, athlete_id, token_id)?),
+        QueryMsg::CanUseToken {
+            athlete_id,
+            token_id
+        } => to_binary(&query_use_token(deps, athlete_id, token_id)?),
     }
 }
 
@@ -652,7 +679,8 @@ fn query_token_info(
         rarity: token.rarity,
         extension: TokenExtension {
             is_locked: token.extension.is_locked,
-            unlock_date: token.extension.unlock_date
+            unlock_date: token.extension.unlock_date,
+            usage: token.extension.usage,
         }
     };
 
@@ -676,6 +704,21 @@ fn query_unlock_token(
     }
 
     Ok(can_unlock)
+}
+
+fn query_use_token(
+    deps: Deps,
+    athlete_id: String,
+    token_id: String
+) -> StdResult<bool> {
+    let token = query_token_info(deps, athlete_id.clone(), token_id.clone()).unwrap();
+    let mut can_use = false;
+
+    if token.extension.usage > 0 {
+        can_use = true;
+    }
+
+    Ok(can_use)
 }
 
 fn _query_terrand(

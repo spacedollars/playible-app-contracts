@@ -25,6 +25,8 @@ pub struct TokenExtension {
     pub is_locked: bool,
     /// Determines the unlock date after the NFT has been locked
     pub unlock_date: Option<Timestamp>,
+    /// Number of times an NFt can be locked up for a game
+    pub usage: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -120,6 +122,13 @@ pub enum QueryMsg {
     LastRound {},
     /// Checks if a locked NFT can be unlocked
     CanUnlockToken {
+        /// Athlete ID of the NFT
+        athlete_id: String,
+        /// Token ID of the NFT to be queried
+        token_id: String,
+    },
+    /// Checks if an NFT can be locked up for a game
+    CanUseToken {
         /// Athlete ID of the NFT
         athlete_id: String,
         /// Token ID of the NFT to be queried
