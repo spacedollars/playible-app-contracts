@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, WasmQuery, WasmMsg, 
     Addr, Coin, Uint128, Timestamp
 };
@@ -260,12 +260,18 @@ pub fn execute_redeem(
         anchor_contract.clone(),
     )?;
 
+    //TODO: Declare this as a static variable, which is incredibly difficult to do for some reason
+    let DECIMAL_FRACTION: Uint128 = Uint128::from(1_000_000_000_000_000_000 as u128);
+
     // transform binary response to state response
     let state_response: StateResponse = from_binary(&state_bin)?;
-    let exchange_rate: Decimal256 = state_response.prev_exchange_rate.into();
+    let exchange_rate: Decimal = state_response.prev_exchange_rate.into();
 
     let contract_msg = to_binary(&AnchorMsg::RedeemStable{})?;
-    let aust_amount = amount * (Decimal256::one() / exchange_rate).into();
+    let aust_amount = amount.multiply_ratio(
+        DECIMAL_FRACTION,
+        DECIMAL_FRACTION * exchange_rate + DECIMAL_FRACTION
+    );
 
     // get anchor usd (aust) contract address from anchor config
     let config_bin: Binary = encode_raw_query(
@@ -392,7 +398,7 @@ pub fn execute_lock_token(
     token_id: String,
     duration: String
 ) -> Result<Response, ContractError> {
-    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
     let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
     let curr_date = env.block.time;
 
@@ -441,7 +447,7 @@ pub fn execute_unlock_token(
     athlete_id: String,
     token_id: String,
 ) -> Result<Response, ContractError> {
-    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
     let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
     let curr_date = env.block.time;
 
