@@ -139,7 +139,7 @@ pub fn execute_purchase(
     let mut mintable_token_list = vec![];
 
     for n in 0..token_count {
-        if query_token_mintable(deps.as_ref(), n.to_string()).unwrap_or(false){    
+        if query_token_mintable(deps.as_ref(), n.to_string(), "C".to_string()).unwrap_or(false){    
                 // Add athlete_id to the mintable list
                 // Increment mintable tokens
                 mintable_token_list.push(n);
@@ -509,7 +509,7 @@ pub fn execute_upgrade_same_token(
 }
 
 pub fn execute_upgrade_rand_token(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     rarity: String,
@@ -543,32 +543,48 @@ pub fn execute_upgrade_rand_token(
         });
     }
 
+    // Create list of mintable tokens
+    let token_count = query_token_count(deps.as_ref()).unwrap();
+    let mut mintable_list = vec![];
+    for n in 0..token_count {
+        if query_token_mintable(deps.as_ref(), n.to_string(), rarity.clone()).unwrap_or(false){    
+                // Add athlete_id to the mintable list
+                // Increment mintable tokens
+                mintable_list.push(n);
+        }
+    }
+
+    // Select random Athlete Token/Address from the mintable list
+    let index_list = hex_to_athlete(deps.branch().as_ref(), rand_seed).unwrap();
+    let athlete_id = mintable_list[index_list[0] as usize].to_string();
+    let mint_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
+
     let mut usage_cap = 3;
-    if rarity.eq("U"){
+    if rarity.clone().eq("U"){
         usage_cap = 5;
-    } else if rarity.eq("R"){
+    } else if rarity.clone().eq("R"){
         usage_cap = 10;
-    } else if rarity.eq("L"){
+    } else if rarity.clone().eq("L"){
         usage_cap = 999_999_999;
     }
-    
+
     // Mint higher rarity token
     let mint_msg = TokenMsg::Mint {
         owner: sender.clone().to_string(),
         token_uri: None,
-        rarity: rarity,
+        rarity: rarity.clone(),
         extension: TokenExtension {
             is_locked: false,
             unlock_date: None,
             usage: usage_cap,
         }
     };
-
-    // response = response.add_message(WasmMsg::Execute {
-    //     contract_addr: token_address.clone().to_string(),
-    //     msg: to_binary(&mint_msg).unwrap(),
-    //     funds: vec![],
-    // });
+    
+    response = response.add_message(WasmMsg::Execute {
+        contract_addr: mint_address.clone().to_string(),
+        msg: to_binary(&mint_msg).unwrap(),
+        funds: vec![],
+    });
     
     Ok(response)
 }
@@ -592,8 +608,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             athlete_id
         } => to_binary(&query_token_address(deps, athlete_id)?),
         QueryMsg::IsTokenMintable {
-            athlete_id
-        } => to_binary(&query_token_mintable(deps, athlete_id)?),
+            athlete_id,
+            rarity,
+        } => to_binary(&query_token_mintable(deps, athlete_id, rarity)?),
         QueryMsg::TokenCount {} => to_binary(&query_token_count(deps)?),
         QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
         QueryMsg::CanUnlockToken {
@@ -644,12 +661,13 @@ fn query_token_address(
 
 fn query_token_mintable(
     deps: Deps,
-    athlete_id: String
+    athlete_id: String,
+    rarity: String
 ) -> StdResult<bool> {
     let token_address = query_token_address(deps, athlete_id).unwrap();
 
     // Query token_address if mintable using the NFT contract's IsMintable{} query
-    let msg = TokenMsg::IsMintable { rarity: "C".to_string() };
+    let msg = TokenMsg::IsMintable { rarity: rarity };
     let wasm = WasmQuery::Smart {
         contract_addr: token_address.to_string(),
         msg: to_binary(&msg)?,
@@ -725,7 +743,7 @@ fn _query_terrand(
     deps: DepsMut,
     env: Env,
     count: u64
-) -> StdResult<Vec<String>> {
+) -> StdResult<String> {
     // Load terrand_addr from the state
     let terrand_addr = query_contract_info(deps.as_ref()).unwrap().terrand_addr;
     //let last_round = query_last_round(deps.as_ref()).unwrap();
@@ -755,26 +773,25 @@ fn _query_terrand(
         .unwrap();
     let random_string = &randomness_hash[n..];
    
-    // Splits random_string into a vector of 3 character strings 
-    let hex_list = random_string.chars()
+    Ok(random_string.to_string())
+}
+
+fn hex_to_athlete(
+    deps: Deps,
+    rand_seed: String
+) -> StdResult<Vec<u64>> {
+
+    // Splits rand_seed into a vector of 3 character strings 
+    let hex_list = rand_seed.chars()
         .collect::<Vec<char>>()
         .chunks(3)
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<String>>();
 
-    Ok(hex_list)
-}
-
-fn hex_to_athlete(
-    deps: Deps,
-    hex_list: Vec<String>
-) -> StdResult<Vec<u64>> {
-
     // Load contract_count from the state
     let token_count = query_token_count(deps).unwrap();
 
     let mut athlete_list: Vec<u64> = Vec::new();
-
     for hex in hex_list.iter(){
         // Convert hexadecimal to decimal
         let deci = u64::from_str_radix(hex, 16).unwrap();

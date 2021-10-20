@@ -115,6 +115,7 @@ pub enum QueryMsg {
     /// Returns a boolean if the token is mintable using the Athlete Contract's IsMintable{} Query
     IsTokenMintable {
         athlete_id: String,
+        rarity: String,
     },
     /// Returns the total number of Athlete Contracts saved 
     TokenCount {},
