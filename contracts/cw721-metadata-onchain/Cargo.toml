@@ -1,11 +1,11 @@
 [package]
-name = "fantasy"
-version = "0.8.1"
+name = "cw721-metadata-onchain"
+version = "0.9.1"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2018"
-description = "Basic implementation cw721 NFTs"
+description = "Example extending CW721 NFT to store metadata on chain"
 license = "Apache-2.0"
-repository = "https://github.com/CosmWasm/cosmwasm-plus"
+repository = "https://github.com/CosmWasm/cw-plus"
 homepage = "https://cosmwasm.com"
 documentation = "https://docs.cosmwasm.com"
 
@@ -21,21 +21,16 @@ crate-type = ["cdylib", "rlib"]
 [features]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-# use library feature to disable all init/handle/query exports
+# use library feature to disable all instantiate/execute/query exports
 library = []
 
 [dependencies]
-cw2 = { version = "0.9.1" }
-cw20 = { version = "0.9.1" }
-cw-storage-plus = { version = "0.9.1" }
+cw721 = { path = "../../packages/cw721", version = "0.9.1" }
+cw721-base = { path = "../cw721-base", version = "0.9.1", features = ["library"] }
 cosmwasm-std = { version = "0.16.0" }
-cosmwasm-storage = { version = "0.16.0", features = ["iterator"] }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
-terra-cosmwasm = { version = "2.2.0" }
-cosmwasm-bignumber = "2.1.1"
-hex = "0.4.3"
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.0" }

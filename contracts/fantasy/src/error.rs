@@ -14,10 +14,10 @@ pub enum ContractError {
     #[error("token_id already claimed")]
     Claimed {},
 
-    #[error("You need to send exactly {}{} to purchase a pack.", amount, denom)]
+    #[error("You need to send exactly {}{} to purchase a pack", amount, denom)]
     WrongAmount { amount: u64, denom: String },
 
-    #[error("The current round has already been used. Please wait for the next round.")]
+    #[error("The current round has already been used. Please wait for the next round")]
     UsedRound {},
 
     #[error("Minting cannot exceed the cap")]
@@ -25,6 +25,9 @@ pub enum ContractError {
 
     #[error("Token cannot be unlocked at this time")]
     Locked {},
+
+    #[error("Token has reached its maximum number of usages")]
+    UsageCapped {},
 
     #[error("Something went wrong")]
     DefaultErr {},
