@@ -17,6 +17,8 @@ pub struct InstantiateMsg {
     pub pack_len: u64,
     // Price of each pack
     pub pack_price: u64,
+    /// contract admin
+    pub admin_addr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
@@ -54,6 +56,10 @@ pub enum ExecuteMsg {
     RedeemStable {
         //amount in uusd to be redeemed from Anchor
         amount: Uint128,
+    },
+    /// Used to move funds out of the contract. Can only be executed by the admin.
+    Transfer {
+        amount: Uint128
     },
     /// Add athlete token contract address
     AddToken {
