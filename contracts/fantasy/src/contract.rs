@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
+    from_binary, to_binary, BankMsg, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, WasmQuery, WasmMsg, 
     Addr, Coin, Uint128, Timestamp
 };
@@ -46,6 +46,7 @@ pub fn instantiate(
 
     let anchor_contract = deps.api.addr_validate(&msg.anchor_addr)?;
     let terrand_contract = deps.api.addr_validate(&msg.terrand_addr)?;
+    let admin_addr = deps.api.addr_validate(&msg.admin_addr)?;
 
     let info = ContractInfoResponse {
         stable_denom: msg.stable_denom,
@@ -53,6 +54,7 @@ pub fn instantiate(
         terrand_addr: terrand_contract,
         pack_len: msg.pack_len,
         pack_price: msg.pack_price,
+        admin_addr: admin_addr,
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
@@ -79,6 +81,9 @@ pub fn execute(
         ExecuteMsg::RedeemStable {
             amount,
         } => execute_redeem(deps, env, info, amount),
+        ExecuteMsg::Transfer {
+            amount,
+        } => execute_transfer(deps, env, info, amount),
         ExecuteMsg::AddToken {
             token
         } => execute_add_token(deps, env, token),
@@ -302,6 +307,33 @@ pub fn execute_redeem(
         .add_attribute("to", &anchor_contract)
         .add_attribute("amount", &amount.to_string())
         .add_attribute("aust_amount", &aust_amount.to_string()))
+}
+
+pub fn execute_transfer(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let admin_addr = query_contract_info(deps.as_ref()).unwrap().admin_addr;
+
+    if info.sender != admin_addr {
+        return Err(ContractError::Unauthorized{})
+    }
+
+    Ok(Response::new()
+        .add_message(BankMsg::Send {
+            to_address: info.sender.to_string(),
+            amount: vec![
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: amount
+                }
+            ],
+        })
+        .add_attribute("action", "transfer")
+        .add_attribute("amount", &amount.to_string())
+    )
 }
 
 pub fn execute_add_token(

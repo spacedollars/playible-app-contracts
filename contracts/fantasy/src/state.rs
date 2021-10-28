@@ -16,7 +16,10 @@ pub struct ContractInfoResponse {
     /// number of NFT players to be pulled per pack
     pub pack_len: u64,
     /// price of each pack
-    pub pack_price: u64
+    pub pack_price: u64,
+    /// contract admin
+    pub admin_addr: Addr,
+
 }
 
 pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("contract_info");
