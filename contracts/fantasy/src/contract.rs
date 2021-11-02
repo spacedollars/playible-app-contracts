@@ -18,11 +18,15 @@ use crate::msg::{
     TokenExtension, NftInfoResponse
 };
 use crate::state::{
-    ContractInfoResponse,
-    CONTRACT_INFO, TOTAL_DEPOSIT, TOKEN_COUNT, LAST_ROUND, 
+    ContractInfoResponse, AthleteInfo,
+    CONTRACT_INFO, TOTAL_DEPOSIT, LAST_ROUND, 
     total_deposit, increase_deposit,
-    token_count, increment_token_count,
+    
     token_addresses, token_addresses_read,
+    token_count, increment_token_count,
+
+    athlete_list, athlete_list_read, 
+    ATHLETE_COUNT, athlete_count, increment_athlete_count,
 };
 use crate::helpers::{
     encode_msg_execute,
@@ -65,7 +69,7 @@ pub fn instantiate(
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
     TOTAL_DEPOSIT.save(deps.branch().storage, &0)?;
-    TOKEN_COUNT.save(deps.branch().storage, &0)?;
+    ATHLETE_COUNT.save(deps.branch().storage, &0)?;
     LAST_ROUND.save(deps.branch().storage, &0)?;
     
     Ok(Response::default())
@@ -682,12 +686,6 @@ fn query_total_deposit(
     Ok(Uint128::from(total_deposit(deps.storage)?))
 }
 
-fn query_token_count(
-    deps: Deps,
-) -> StdResult<u64> {
-    Ok(token_count(deps.storage)?)
-}
-
 fn query_last_round(
     deps: Deps,
 ) -> StdResult<u64> {
@@ -705,20 +703,51 @@ fn query_token_address(
     token_addresses_read(deps.storage).load(athlete_id.as_bytes())
 }
 
+fn query_token_count(
+    deps: Deps,
+) -> StdResult<u64> {
+    Ok(token_count(deps.storage)?)
+}
+
+fn query_athlete_info(
+    deps: Deps,
+    athlete_id: String
+) -> StdResult<AthleteInfo> {
+    athlete_list_read(deps.storage).load(athlete_id.as_bytes())
+}
+
+fn query_athlete_count(
+    deps: Deps,
+) -> StdResult<u64> {
+    Ok(athlete_count(deps.storage)?)
+}
+
 fn query_token_mintable(
     deps: Deps,
     athlete_id: String,
     rarity: String
 ) -> StdResult<bool> {
-    let token_address = query_token_address(deps, athlete_id).unwrap();
+    let contract_info = query_contract_info(deps).unwrap();
+    let athlete_info = query_athlete_info(deps, athlete_id).unwrap();
+    let mut is_mintable = true;
 
-    // Query token_address if mintable using the NFT contract's IsMintable{} query
-    let msg = TokenMsg::IsMintable { rarity: rarity };
-    let wasm = WasmQuery::Smart {
-        contract_addr: token_address.to_string(),
-        msg: to_binary(&msg)?,
-    };
-    let is_mintable: bool = deps.querier.query(&wasm.into())?;
+    if rarity.eq("U"){
+        if athlete_info.uncommon_count == contract_info.uncommon_cap {
+            is_mintable = false
+        }
+    } else if rarity.eq("R"){
+        if athlete_info.rare_count == contract_info.rare_cap {
+            is_mintable = false
+        }
+    } else if rarity.eq("L"){
+        if athlete_info.legendary_count == contract_info.legendary_cap {
+            is_mintable = false
+        }
+    } else  {
+        if athlete_info.common_count == contract_info.common_cap {
+            is_mintable = false
+        }
+    }
 
     Ok(is_mintable)
 }

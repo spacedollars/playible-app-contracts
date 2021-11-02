@@ -129,7 +129,7 @@ pub enum QueryMsg {
     },
     /// Returns the total deposited stable coin amount to Anchor
     TotalDeposit {},
-    /// Returns a boolean if the token is mintable using the Athlete Contract's IsMintable{} Query
+    /// Returns a boolean if the token is mintable
     IsTokenMintable {
         athlete_id: String,
         rarity: String,
@@ -189,10 +189,6 @@ pub enum TokenMsg {
     NftInfo {
         /// Token ID of the NFT to be queried
         token_id: String,
-    },
-    IsMintable {
-        /// Describes the rarity of the NFT 
-        rarity: String,
     },
 }
 
