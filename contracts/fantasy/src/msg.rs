@@ -9,16 +9,23 @@ use cosmwasm_bignumber::{Uint256, Decimal256};
 pub struct InstantiateMsg {
     /// Stable coin denomination. 
     pub stable_denom: String,
-    // anchor contract address for depositing the rewards
+    /// anchor contract address for depositing the rewards
     pub anchor_addr: String,
-    // terrand contract address for calling Oracle's DRand
+    /// terrand contract address for calling Oracle's DRand
     pub terrand_addr: String,
-    // Number of Player NFTs to be pulled per pack
-    pub pack_len: u64,
-    // Price of each pack
-    pub pack_price: u64,
+    /// contract address for the CW721 Athlete contract
+    pub athlete_addr: String,
     /// contract admin
     pub admin_addr: String,
+    /// Number of Player NFTs to be pulled per pack
+    pub pack_len: u64,
+    /// Price of each pack
+    pub pack_price: u64,
+    // Maximum number tokens to be minted for each rarity
+    pub common_cap: u64,
+    pub uncommon_cap: u64,
+    pub rare_cap: u64,
+    pub legendary_cap: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]

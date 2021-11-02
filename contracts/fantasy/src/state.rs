@@ -13,13 +13,19 @@ pub struct ContractInfoResponse {
     pub anchor_addr: Addr,
     // terrand contract address for calling Oracle's DRand
     pub terrand_addr: Addr,
+    /// contract address for the CW721 Athlete contract
+    pub athlete_addr: Addr,
+    /// contract admin
+    pub admin_addr: Addr,
     /// number of NFT players to be pulled per pack
     pub pack_len: u64,
     /// price of each pack
     pub pack_price: u64,
-    /// contract admin
-    pub admin_addr: Addr,
-
+    // Maximum number tokens to be minted for each rarity
+    pub common_cap: u64,
+    pub uncommon_cap: u64,
+    pub rare_cap: u64,
+    pub legendary_cap: u64,
 }
 
 pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("contract_info");

@@ -46,15 +46,21 @@ pub fn instantiate(
 
     let anchor_contract = deps.api.addr_validate(&msg.anchor_addr)?;
     let terrand_contract = deps.api.addr_validate(&msg.terrand_addr)?;
+    let athlete_contract = deps.api.addr_validate(&msg.athlete_addr)?;
     let admin_addr = deps.api.addr_validate(&msg.admin_addr)?;
 
     let info = ContractInfoResponse {
         stable_denom: msg.stable_denom,
         anchor_addr: anchor_contract,
         terrand_addr: terrand_contract,
+        athlete_addr: athlete_contract,
+        admin_addr: admin_addr,
         pack_len: msg.pack_len,
         pack_price: msg.pack_price,
-        admin_addr: admin_addr,
+        common_cap: msg.common_cap,
+        uncommon_cap: msg.uncommon_cap,
+        rare_cap: msg.rare_cap,
+        legendary_cap: msg.legendary_cap
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
