@@ -4,7 +4,7 @@ use serde::Serialize;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
 use cw2::set_contract_version;
-use cw721::{ContractInfoResponse, CustomMsg, Cw721Execute, Cw721Query, Cw721ReceiveMsg, Expiration};
+use cw721::{ContractInfoResponse, CustomMsg, Cw721Execute, Cw721ReceiveMsg, Expiration};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MintMsg};
@@ -31,10 +31,6 @@ where
         let info = ContractInfoResponse {
             name: msg.name,
             symbol: msg.symbol,
-            common_cap: msg.common_cap,
-            uncommon_cap: msg.uncommon_cap,
-            rare_cap: msg.rare_cap,
-            legendary_cap: msg.legendary_cap,
         };
         self.contract_info.save(deps.storage, &info)?;
         let minter = deps.api.addr_validate(&msg.minter)?;
@@ -72,14 +68,14 @@ where
                 token_id,
                 msg,
             } => self.send_nft(deps, env, info, contract, token_id, msg),
+            ExecuteMsg::UpdateMinter {
+                minter,
+            } => self.update_minter(deps, info, minter),
             ExecuteMsg::UpdateToken {
                 token_id,
                 token_uri,
                 extension,
-            } => self.update_token(deps, env, info, token_id, token_uri, extension),
-            ExecuteMsg::UpdateMinter {
-                minter,
-            } => self.update_minter(deps, info, minter),
+            } => self.update_token(deps, env, info, token_id, token_uri, extension),   
         }
     }
 }
@@ -98,10 +94,6 @@ where
         msg: MintMsg<T>,
     ) -> Result<Response<C>, ContractError> {
         let minter = self.minter.load(deps.storage)?;
-        let rarity_copy_1 = msg.rarity.clone();
-        let rarity_copy_2 = msg.rarity.clone();
-        let rarity_copy_3 = msg.rarity.clone();
-        let rarity_copy_4 = msg.rarity.clone();
 
         if info.sender != minter {
             return Err(ContractError::Unauthorized {});
@@ -112,60 +104,20 @@ where
             owner: deps.api.addr_validate(&msg.owner)?,
             approvals: vec![],
             token_uri: msg.token_uri,
-            rarity: msg.rarity,
             extension: msg.extension,
         };
-
-        // check if the token is mintable according to the listed cap
-        if !self.query_mintable(deps.as_ref(), rarity_copy_1).unwrap() {
-            return Err(ContractError::Capped {})
-        }
-
-        // generate a token id based on rarity
-        let token_id = self.generate_token_id(deps.as_ref(), rarity_copy_2).unwrap();
-
         self.tokens
-            .update(deps.storage, &token_id, |old| match old {
+            .update(deps.storage, &msg.token_id, |old| match old {
                 Some(_) => Err(ContractError::Claimed {}),
                 None => Ok(token),
             })?;
 
-        if rarity_copy_3.eq("U"){
-            self.increment_uncommon_tokens(deps.storage)?;
-        } else if rarity_copy_3.eq("R"){
-            self.increment_rare_tokens(deps.storage)?;
-        } else if rarity_copy_3.eq("L"){
-            self.increment_legendary_tokens(deps.storage)?;
-        } else  {
-            self.increment_common_tokens(deps.storage)?;
-        }
+        self.increment_tokens(deps.storage)?;
 
         Ok(Response::new()
             .add_attribute("action", "mint")
             .add_attribute("minter", info.sender)
-            .add_attribute("token_id", token_id.clone())
-            .add_attribute("rarity", rarity_copy_4))
-    }
-
-    pub fn update_token(
-        &self,
-        deps: DepsMut,
-        _env: Env,
-        _info: MessageInfo,
-        token_id: String,
-        token_uri: Option<String>,  
-        extension: Option<T>
-    ) -> Result<Response<C>, ContractError> {
-        let mut token = self.tokens.load(deps.storage, &token_id)?;
-
-        token.token_uri = token_uri;
-        token.extension = extension.unwrap();
-
-        self.tokens.save(deps.storage, &token_id.clone(), &token)?;
-
-        Ok(Response::new()
-            .add_attribute("action", "update_token")
-            .add_attribute("token_id", token_id.clone()))
+            .add_attribute("token_id", msg.token_id))
     }
 
     pub fn update_minter(
@@ -189,32 +141,26 @@ where
             .add_attribute("prev_minter", prev_minter)
             .add_attribute("new_minter", minter))
     }
-
-    // returns a string containing contract symbol + token rarity + token count
-    fn generate_token_id (
+    
+    pub fn update_token(
         &self,
-        deps: Deps,
-        rarity: String,
-    ) -> StdResult<String> {
+        deps: DepsMut,
+        _env: Env,
+        _info: MessageInfo,
+        token_id: String,
+        token_uri: Option<String>,  
+        extension: Option<T>
+    ) -> Result<Response<C>, ContractError> {
+        let mut token = self.tokens.load(deps.storage, &token_id)?;
 
-        let contract_info = self.contract_info(deps).unwrap();
-        let mut token_id: String = contract_info.symbol.to_owned();
+        token.token_uri = token_uri;
+        token.extension = extension.unwrap();
 
-        let token_count = self.num_tokens(deps, rarity.clone()).unwrap().count + 1;
-        
-        let mut rarity_string: &str = "C";
-        if rarity.eq("U"){
-            rarity_string = "U"; 
-        } else if rarity.eq("R"){
-            rarity_string = "R";
-        } else if rarity.eq("L"){
-            rarity_string = "L";
-        } 
+        self.tokens.save(deps.storage, &token_id.clone(), &token)?;
 
-        token_id.push_str(rarity_string);
-        token_id.push_str(&token_count.to_string());
-
-        Ok(token_id)
+        Ok(Response::new()
+            .add_attribute("action", "update_token")
+            .add_attribute("token_id", token_id.clone()))
     }
 }
 

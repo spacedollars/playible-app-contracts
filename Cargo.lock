@@ -220,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "cw721"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -231,7 +231,7 @@ dependencies = [
 
 [[package]]
 name = "cw721-base"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -239,19 +239,6 @@ dependencies = [
  "cw0",
  "cw2",
  "cw721",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw721-metadata-onchain"
-version = "0.9.1"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw721",
- "cw721-base",
  "schemars",
  "serde",
  "thiserror",

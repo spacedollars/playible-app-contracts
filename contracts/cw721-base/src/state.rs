@@ -14,10 +14,7 @@ where
 {
     pub contract_info: Item<'a, ContractInfoResponse>,
     pub minter: Item<'a, Addr>,
-    pub common_count: Item<'a, u64>,
-    pub uncommon_count: Item<'a, u64>,
-    pub rare_count: Item<'a, u64>,
-    pub legendary_count: Item<'a, u64>,
+    pub token_count: Item<'a, u64>,
     /// Stored as (granter, operator) giving operator full control over granter's account
     pub operators: Map<'a, (&'a Addr, &'a Addr), Expiration>,
     pub tokens: IndexedMap<'a, &'a str, TokenInfo<T>, TokenIndexes<'a, T>>,
@@ -41,10 +38,7 @@ where
         Self::new(
             "nft_info",
             "minter",
-            "common_tokens",
-            "uncommon_tokens",
-            "rare_tokens",
-            "legendary_tokens",
+            "num_tokens",
             "operators",
             "tokens",
             "tokens__owner",
@@ -59,10 +53,7 @@ where
     fn new(
         contract_key: &'a str,
         minter_key: &'a str,
-        common_count_key: &'a str,
-        uncommon_count_key: &'a str,
-        rare_count_key: &'a str,
-        legendary_count_key: &'a str,
+        token_count_key: &'a str,
         operator_key: &'a str,
         tokens_key: &'a str,
         tokens_owner_key: &'a str,
@@ -73,53 +64,20 @@ where
         Self {
             contract_info: Item::new(contract_key),
             minter: Item::new(minter_key),
-            common_count: Item::new(common_count_key),
-            uncommon_count: Item::new(uncommon_count_key),
-            rare_count: Item::new(rare_count_key),
-            legendary_count: Item::new(legendary_count_key),
+            token_count: Item::new(token_count_key),
             operators: Map::new(operator_key),
             tokens: IndexedMap::new(tokens_key, indexes),
             _custom_response: PhantomData,
         }
     }
 
-    pub fn common_count(&self, storage: &dyn Storage) -> StdResult<u64> {
-        Ok(self.common_count.may_load(storage)?.unwrap_or_default())
+    pub fn token_count(&self, storage: &dyn Storage) -> StdResult<u64> {
+        Ok(self.token_count.may_load(storage)?.unwrap_or_default())
     }
 
-    pub fn increment_common_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.common_count(storage)? + 1;
-        self.common_count.save(storage, &val)?;
-        Ok(val)
-    }
-
-    pub fn uncommon_count(&self, storage: &dyn Storage) -> StdResult<u64> {
-        Ok(self.uncommon_count.may_load(storage)?.unwrap_or_default())
-    }
-
-    pub fn increment_uncommon_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.uncommon_count(storage)? + 1;
-        self.uncommon_count.save(storage, &val)?;
-        Ok(val)
-    }
-
-    pub fn rare_count(&self, storage: &dyn Storage) -> StdResult<u64> {
-        Ok(self.rare_count.may_load(storage)?.unwrap_or_default())
-    }
-
-    pub fn increment_rare_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.rare_count(storage)? + 1;
-        self.rare_count.save(storage, &val)?;
-        Ok(val)
-    }
-
-    pub fn legendary_count(&self, storage: &dyn Storage) -> StdResult<u64> {
-        Ok(self.legendary_count.may_load(storage)?.unwrap_or_default())
-    }
-
-    pub fn increment_legendary_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.legendary_count(storage)? + 1;
-        self.legendary_count.save(storage, &val)?;
+    pub fn increment_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
+        let val = self.token_count(storage)? + 1;
+        self.token_count.save(storage, &val)?;
         Ok(val)
     }
 }
@@ -130,12 +88,12 @@ pub struct TokenInfo<T> {
     pub owner: Addr,
     /// Approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     pub approvals: Vec<Approval>,
+
     /// Universal resource identifier for this NFT
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
+
     /// You can add any custom metadata here when you extend cw721-base
     pub extension: T,
 }

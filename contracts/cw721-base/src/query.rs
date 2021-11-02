@@ -25,19 +25,8 @@ where
         self.contract_info.load(deps.storage)
     }
 
-    fn num_tokens(&self, deps: Deps, rarity: String) -> StdResult<NumTokensResponse> {
-        let count: u64;
-
-        if rarity.eq("U"){
-            count = self.uncommon_count(deps.storage)?;
-        } else if rarity.eq("R"){
-            count = self.rare_count(deps.storage)?;
-        } else if rarity.eq("L"){
-            count = self.legendary_count(deps.storage)?;
-        } else  {
-            count = self.common_count(deps.storage)?;
-        }
-
+    fn num_tokens(&self, deps: Deps) -> StdResult<NumTokensResponse> {
+        let count = self.token_count(deps.storage)?;
         Ok(NumTokensResponse { count })
     }
 
@@ -45,7 +34,6 @@ where
         let info = self.tokens.load(deps.storage, &token_id)?;
         Ok(NftInfoResponse {
             token_uri: info.token_uri,
-            rarity: info.rarity,
             extension: info.extension,
         })
     }
@@ -150,7 +138,6 @@ where
             },
             info: NftInfoResponse {
                 token_uri: info.token_uri,
-                rarity: info.rarity,
                 extension: info.extension,
             },
         })
@@ -167,32 +154,6 @@ where
         Ok(MinterResponse {
             minter: minter_addr.to_string(),
         })
-    }
-
-    pub fn query_mintable(&self, deps: Deps, rarity: String) -> StdResult<bool> {
-        let contract_info = self.contract_info(deps).unwrap();
-        let token_count = self.num_tokens(deps, rarity.clone()).unwrap();
-        let mut is_mintable = true;
-    
-        if rarity.eq("U"){
-            if token_count.count == contract_info.uncommon_cap {
-                is_mintable = false
-            }
-        } else if rarity.eq("R"){
-            if token_count.count == contract_info.rare_cap {
-                is_mintable = false
-            }
-        } else if rarity.eq("L"){
-            if token_count.count == contract_info.legendary_cap {
-                is_mintable = false
-            }
-        } else  {
-            if token_count.count == contract_info.common_cap {
-                is_mintable = false
-            }
-        }
-    
-        Ok(is_mintable)
     }
 
     pub fn query(&self, deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
@@ -228,10 +189,7 @@ where
                 start_after,
                 limit,
             )?),
-            QueryMsg::CommonTokens {} => to_binary(&self.num_tokens(deps, "C".to_string())?),
-            QueryMsg::UncommonTokens {} => to_binary(&self.num_tokens(deps, "U".to_string())?),
-            QueryMsg::RareTokens {} => to_binary(&self.num_tokens(deps, "R".to_string())?),
-            QueryMsg::LegendaryTokens {} => to_binary(&self.num_tokens(deps, "L".to_string())?),
+            QueryMsg::NumTokens {} => to_binary(&self.num_tokens(deps)?),
             QueryMsg::Tokens {
                 owner,
                 start_after,
@@ -239,8 +197,7 @@ where
             } => to_binary(&self.tokens(deps, owner, start_after, limit)?),
             QueryMsg::AllTokens { start_after, limit } => {
                 to_binary(&self.all_tokens(deps, start_after, limit)?)
-            },
-            QueryMsg::IsMintable { rarity } => to_binary(&self.query_mintable(deps, rarity)?)
+            }
         }
     }
 }
