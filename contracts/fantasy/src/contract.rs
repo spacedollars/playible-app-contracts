@@ -53,8 +53,8 @@ pub fn instantiate(
         stable_denom: msg.stable_denom,
         anchor_addr: anchor_contract,
         terrand_addr: terrand_contract,
-        athlete_addr: athlete_contract,
         admin_addr: admin_addr,
+        athlete_addr: athlete_contract,
         pack_len: msg.pack_len,
         pack_price: msg.pack_price,
         common_cap: msg.common_cap,
@@ -95,7 +95,10 @@ pub fn execute(
         } => execute_add_athlete(deps, env, symbols),
         ExecuteMsg::TokenTurnover {
             new_contract
-        } => execute_token_turnover(deps, env, new_contract),
+        } => execute_token_turnover(deps, env, info, new_contract),
+        ExecuteMsg::UpdateCW721 {
+            new_contract
+        } => execute_update_cw721(deps, env, info, new_contract),
         ExecuteMsg::LockToken {
             token_id,
             duration
@@ -377,10 +380,15 @@ pub fn execute_add_athlete(
 pub fn execute_token_turnover(
     mut deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     new_contract: String,
 ) -> Result<Response, ContractError> {
     let new_address = deps.api.addr_validate(&new_contract)?;
-    let contract_addr = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+    let contract_info = query_contract_info(deps.branch().as_ref()).unwrap();
+
+    if info.sender != contract_info.admin_addr {
+        return Err(ContractError::Unauthorized{})
+    }
 
     let mut response = Response::new()
         .add_attribute("action", "token_turnover")
@@ -393,7 +401,7 @@ pub fn execute_token_turnover(
 
     let token_res = encode_msg_execute(
         to_binary(&update_msg).unwrap(),
-        contract_addr.clone(),
+        contract_info.athlete_addr.clone(),
         vec![]
     )?;
 
@@ -401,6 +409,42 @@ pub fn execute_token_turnover(
     response = response.add_message(token_res);
 
     Ok(response)
+}
+
+pub fn execute_update_cw721(
+    mut deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    new_contract: String,
+) -> Result<Response, ContractError> {
+    let contract_info = query_contract_info(deps.as_ref()).unwrap();
+    let new_address = deps.api.addr_validate(&new_contract)?;
+    let old_address = contract_info.athlete_addr;
+
+    if info.sender != contract_info.admin_addr.clone() {
+        return Err(ContractError::Unauthorized{})
+    }
+
+    let info = ContractInfoResponse {
+        stable_denom: contract_info.stable_denom,
+        anchor_addr: contract_info.anchor_addr,
+        terrand_addr: contract_info.terrand_addr,
+        admin_addr: contract_info.admin_addr.clone(),
+        athlete_addr: new_address.clone(),
+        pack_len: contract_info.pack_len,
+        pack_price: contract_info.pack_price,
+        common_cap: contract_info.common_cap,
+        uncommon_cap: contract_info.uncommon_cap,
+        rare_cap: contract_info.rare_cap,
+        legendary_cap: contract_info.legendary_cap
+    };
+
+    CONTRACT_INFO.save(deps.branch().storage, &info)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_cw721")
+        .add_attribute("from", old_address.clone())
+        .add_attribute("to", new_address.clone()))
 }
 
 pub fn execute_lock_token(

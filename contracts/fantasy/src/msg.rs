@@ -13,10 +13,10 @@ pub struct InstantiateMsg {
     pub anchor_addr: String,
     /// terrand contract address for calling Oracle's DRand
     pub terrand_addr: String,
-    /// contract address for the CW721 Athlete contract
-    pub athlete_addr: String,
     /// contract admin
     pub admin_addr: String,
+    /// contract address for the CW721 Athlete contract
+    pub athlete_addr: String,
     /// Number of Player NFTs to be pulled per pack
     pub pack_len: u64,
     /// Price of each pack
@@ -26,7 +26,7 @@ pub struct InstantiateMsg {
     pub uncommon_cap: u64,
     pub rare_cap: u64,
     pub legendary_cap: u64,
-}
+}  
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct TokenExtension {
@@ -76,6 +76,10 @@ pub enum ExecuteMsg {
     },
     /// Performs the turnover of tokens to another instance of Fantasy contract
     TokenTurnover {
+        new_contract: String
+    },
+    /// Updates Athlete Contract address
+    UpdateCW721 {
         new_contract: String
     },
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
