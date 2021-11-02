@@ -28,6 +28,17 @@ pub struct ContractInfoResponse {
     pub legendary_cap: u64,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct AthleteInfo {
+    /// Symbol used for token_id generation
+    pub symbol: String,
+    /// Current number of minted tokens per rarity
+    pub common_count: u64,
+    pub uncommon_count: u64,
+    pub rare_count: u64,
+    pub legendary_count: u64,
+}
+
 pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("contract_info");
 pub const TOTAL_DEPOSIT: Item<u64> = Item::new("total_deposit");
 pub const ANCHOR_ADDR: Item<Addr> = Item::new("anchor_addr");
@@ -36,6 +47,7 @@ pub const PACK_LEN: Item<u64>  = Item::new("pack_len");
 pub const TOKEN_COUNT: Item<u64>  = Item::new("token_count");
 pub const LAST_ROUND: Item<u64>  = Item::new("last_round");
 pub const TOKEN_ADDRESSES_PREFIX: &[u8] = b"token_addresses";
+pub const ATHLETE_LIST_PREFIX: &[u8] = b"athlete_list";
 
 pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
     Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())
@@ -69,4 +81,12 @@ pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<Addr> {
 
 pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<Addr> {
     bucket_read(storage, TOKEN_ADDRESSES_PREFIX)
+}
+
+pub fn athlete_list(storage: &mut dyn Storage) -> Bucket<AthleteInfo> {
+    bucket(storage, ATHLETE_LIST_PREFIX)
+}
+
+pub fn athlete_list_read(storage: &dyn Storage) -> ReadonlyBucket<AthleteInfo> {
+    bucket_read(storage, ATHLETE_LIST_PREFIX)
 }

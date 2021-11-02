@@ -30,6 +30,10 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct TokenExtension {
+    /// Reference ID of the Athlete Token
+    pub athlete_id: String,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
     /// Determines whether or not the NFT is locked for Fantasy Sports
     pub is_locked: bool,
     /// Determines the unlock date after the NFT has been locked
@@ -42,8 +46,6 @@ pub struct TokenExtension {
 pub struct NftInfoResponse {
     /// Universal Resource Identifier link of the NFT
     pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
     /// Additional Metadata of Fantasy Athlete tokens
     pub extension: TokenExtension,
 }
@@ -157,12 +159,12 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum TokenMsg {
     Mint {
+        /// Unique ID of the NFT
+        // token_id: String,
         /// The owner of the newly minter NFT
         owner: String,
         /// Universal Resource Identifier link of the NFT
         token_uri: Option<String>,
-        /// Describes the rarity of the NFT 
-        rarity: String,
         /// Additional Metadata of Fantasy Athlete tokens
         extension: TokenExtension
     },

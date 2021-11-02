@@ -177,13 +177,14 @@ pub fn execute_purchase(
     // Default NFT rarity is Common
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
-        let token_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
+        let token_address = query_token_address(deps.branch().as_ref(), athlete_id.clone()).unwrap();
         
         let mint_msg = TokenMsg::Mint {
             owner: sender.clone().to_string(),
             token_uri: None,
-            rarity: "C".to_string(),
             extension: TokenExtension {
+                athlete_id: athlete_id.clone(),
+                rarity: "C".to_string(),
                 is_locked: false,
                 unlock_date: None,
                 usage: 3,
@@ -431,6 +432,8 @@ pub fn execute_lock_token(
         token_id: token_id.clone(),
         token_uri: token.token_uri,
         extension: TokenExtension {
+            athlete_id: token.extension.athlete_id,
+            rarity: token.extension.rarity,
             is_locked: true,
             unlock_date: token.extension.unlock_date,
             usage: token.extension.usage - 1
@@ -472,6 +475,8 @@ pub fn execute_unlock_token(
         token_id: token_id.clone(),
         token_uri: token.token_uri,
         extension: TokenExtension {
+            athlete_id: token.extension.athlete_id,
+            rarity: token.extension.rarity,
             is_locked: false,
             unlock_date: None,
             usage: token.extension.usage
@@ -497,7 +502,7 @@ pub fn execute_upgrade_same_token(
     tokens: Vec<String>
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
-    let token_address = query_token_address(deps.as_ref(), athlete_id).unwrap();
+    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
 
     let mut response = Response::new()
         .add_attribute("action", "upgrade_same_token")
@@ -530,8 +535,9 @@ pub fn execute_upgrade_same_token(
     let mint_msg = TokenMsg::Mint {
         owner: sender.clone().to_string(),
         token_uri: None,
-        rarity: rarity,
         extension: TokenExtension {
+            athlete_id: athlete_id.clone(),
+            rarity: rarity.clone(),
             is_locked: false,
             unlock_date: None,
             usage: usage_cap,
@@ -596,7 +602,7 @@ pub fn execute_upgrade_rand_token(
     // Select random Athlete Token/Address from the mintable list
     let index_list = hex_to_athlete(deps.branch().as_ref(), rand_seed).unwrap();
     let athlete_id = mintable_list[index_list[0] as usize].to_string();
-    let mint_address = query_token_address(deps.branch().as_ref(), athlete_id).unwrap();
+    let mint_address = query_token_address(deps.branch().as_ref(), athlete_id.clone()).unwrap();
 
     let mut usage_cap = 3;
     if rarity.clone().eq("U"){
@@ -611,8 +617,9 @@ pub fn execute_upgrade_rand_token(
     let mint_msg = TokenMsg::Mint {
         owner: sender.clone().to_string(),
         token_uri: None,
-        rarity: rarity.clone(),
         extension: TokenExtension {
+            athlete_id: athlete_id.clone(),
+            rarity: rarity.clone(),
             is_locked: false,
             unlock_date: None,
             usage: usage_cap,
@@ -733,8 +740,9 @@ fn query_token_info(
 
     let nft_info = NftInfoResponse {
         token_uri: token.token_uri,
-        rarity: token.rarity,
         extension: TokenExtension {
+            athlete_id: token.extension.athlete_id,
+            rarity: token.extension.rarity,
             is_locked: token.extension.is_locked,
             unlock_date: token.extension.unlock_date,
             usage: token.extension.usage,
