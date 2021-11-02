@@ -70,9 +70,9 @@ pub enum ExecuteMsg {
     Transfer {
         amount: Uint128
     },
-    /// Add athlete token contract address
-    AddToken {
-        token: String,
+    /// Add athlete token information
+    AddAthlete {
+        symbols: Vec<String>,
     },
     /// Performs the turnover of tokens to another instance of Fantasy contract
     TokenTurnover {
@@ -80,8 +80,6 @@ pub enum ExecuteMsg {
     },
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
     LockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
         /// Time before a token can be unlocked
@@ -89,8 +87,6 @@ pub enum ExecuteMsg {
     },
     /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
     UnlockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
     },
@@ -98,10 +94,10 @@ pub enum ExecuteMsg {
     UpgradeSameToken {
         /// Describes the rarity of the NFT 
         rarity: String,
-        /// Athlete ID of the NFTs to be burned
-        athlete_id: String,
         /// NFTs to burn
         tokens: Vec<String>,
+        /// Athlete ID of the NFTs to be burned/minted
+        athlete_id: String,
     },
     /// Exchanges any Athlete tokens of the same rarity for a random higher rarity token
     UpgradeRandToken {
@@ -121,32 +117,26 @@ pub enum QueryMsg {
     ContractInfo {},
     /// Returns the price for purchasing a pack
     PackPrice {},
-    /// Returns the contract address of the corresponding token id
-    TokenContract {
-        athlete_id: String,
-    },
     /// Returns the total deposited stable coin amount to Anchor
     TotalDeposit {},
+    /// Returns the token information of the corresponding Athlete id
+    AthleteInfo {
+        athlete_id: String,
+    },
+    /// Returns the total number of unique Athlete tokens saved 
+    AthleteCount {},
     /// Returns a boolean if the token is mintable
     IsTokenMintable {
         athlete_id: String,
         rarity: String,
     },
-    /// Returns the total number of Athlete Contracts saved 
-    TokenCount {},
-    /// Returns the last round used for Terrand
-    LastRound {},
     /// Checks if a locked NFT can be unlocked
     CanUnlockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },
     /// Checks if an NFT can be locked up for a game
     CanUseToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },

@@ -45,9 +45,6 @@ pub const LAST_ROUND: Item<u64>  = Item::new("last_round");
 pub const ATHLETE_LIST_PREFIX: &[u8] = b"athlete_list";
 pub const ATHLETE_COUNT: Item<u64>  = Item::new("athlete_count");
 
-pub const TOKEN_ADDRESSES_PREFIX: &[u8] = b"token_addresses";
-pub const TOKEN_COUNT: Item<u64>  = Item::new("token_count");
-
 pub fn total_deposit(storage: &dyn Storage) -> StdResult<u64> {
     Ok(TOTAL_DEPOSIT.may_load(storage)?.unwrap_or_default())
 }
@@ -69,7 +66,7 @@ pub fn athlete_count(storage: &dyn Storage) -> StdResult<u64> {
 }
 
 pub fn increment_athlete_count(storage: &mut dyn Storage) -> StdResult<u64> {
-    let val = token_count(storage)? + 1;
+    let val = athlete_count(storage)? + 1;
     ATHLETE_COUNT.save(storage, &val)?;
     Ok(val)
 }
@@ -80,24 +77,4 @@ pub fn athlete_list(storage: &mut dyn Storage) -> Bucket<AthleteInfo> {
 
 pub fn athlete_list_read(storage: &dyn Storage) -> ReadonlyBucket<AthleteInfo> {
     bucket_read(storage, ATHLETE_LIST_PREFIX)
-}
-
-///
-
-pub fn token_count(storage: &dyn Storage) -> StdResult<u64> {
-    Ok(TOKEN_COUNT.may_load(storage)?.unwrap_or_default())
-}
-
-pub fn increment_token_count(storage: &mut dyn Storage) -> StdResult<u64> {
-    let val = token_count(storage)? + 1;
-    TOKEN_COUNT.save(storage, &val)?;
-    Ok(val)
-}
-
-pub fn token_addresses(storage: &mut dyn Storage) -> Bucket<Addr> {
-    bucket(storage, TOKEN_ADDRESSES_PREFIX)
-}
-
-pub fn token_addresses_read(storage: &dyn Storage) -> ReadonlyBucket<Addr> {
-    bucket_read(storage, TOKEN_ADDRESSES_PREFIX)
 }

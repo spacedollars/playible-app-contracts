@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, BankMsg, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, WasmQuery, WasmMsg, 
-    Addr, Coin, Uint128, Timestamp
+    Coin, Uint128, Timestamp
 };
 use cosmwasm_storage::to_length_prefixed;
 // use cosmwasm_bignumber::{Decimal256};
@@ -21,10 +21,6 @@ use crate::state::{
     ContractInfoResponse, AthleteInfo,
     CONTRACT_INFO, TOTAL_DEPOSIT, LAST_ROUND, 
     total_deposit, increase_deposit,
-    
-    token_addresses, token_addresses_read,
-    token_count, increment_token_count,
-
     athlete_list, athlete_list_read, 
     ATHLETE_COUNT, athlete_count, increment_athlete_count,
 };
@@ -94,26 +90,24 @@ pub fn execute(
         ExecuteMsg::Transfer {
             amount,
         } => execute_transfer(deps, env, info, amount),
-        ExecuteMsg::AddToken {
-            token
-        } => execute_add_token(deps, env, token),
+        ExecuteMsg::AddAthlete {
+            symbols
+        } => execute_add_athlete(deps, env, symbols),
         ExecuteMsg::TokenTurnover {
             new_contract
         } => execute_token_turnover(deps, env, new_contract),
         ExecuteMsg::LockToken {
-            athlete_id,
             token_id,
             duration
-        } => execute_lock_token(deps, env, info, athlete_id, token_id, duration),
+        } => execute_lock_token(deps, env, info, token_id, duration),
         ExecuteMsg::UnlockToken {
-            athlete_id,
             token_id,
-        } => execute_unlock_token(deps, env, info, athlete_id, token_id),
+        } => execute_unlock_token(deps, env, info, token_id),
         ExecuteMsg::UpgradeSameToken {
             rarity,
+            tokens,
             athlete_id,
-            tokens
-        } => execute_upgrade_same_token(deps, env, info, rarity, athlete_id, tokens),
+        } => execute_upgrade_same_token(deps, env, info, rarity, tokens, athlete_id),
         ExecuteMsg::UpgradeRandToken {
             rarity,
             tokens,
@@ -150,9 +144,9 @@ pub fn execute_purchase(
     }
     
     // Generate a list of mintable tokens
-    let token_count = query_token_count(deps.as_ref()).unwrap();
+    let athlete_count = query_athlete_count(deps.as_ref()).unwrap();
     let mut mintable_token_list = vec![];
-    for n in 0..token_count {
+    for n in 0..athlete_count {
         if query_token_mintable(deps.as_ref(), n.to_string(), "C".to_string()).unwrap_or(false){    
             // Add athlete_id to the mintable list
             // Increment mintable tokens
@@ -180,7 +174,6 @@ pub fn execute_purchase(
     // Default NFT rarity is Common
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
-        let token_address = query_token_address(deps.branch().as_ref(), athlete_id.clone()).unwrap();
         let token_id = generate_token_id(deps.branch().as_ref(), athlete_id.clone(), "C".to_string()).unwrap();
         
         let mint_msg = TokenMsg::Mint {
@@ -197,7 +190,7 @@ pub fn execute_purchase(
         };
 
         response = response.add_message(WasmMsg::Execute {
-            contract_addr: token_address.clone().to_string(),
+            contract_addr: contract_info.athlete_addr.to_string(),
             msg: to_binary(&mint_msg).unwrap(),
             funds: vec![],
         });
@@ -348,69 +341,75 @@ pub fn execute_transfer(
     )
 }
 
-pub fn execute_add_token(
+pub fn execute_add_athlete(
     deps: DepsMut,
     _env: Env,
-    token: String,
+    symbols: Vec<String>,
 ) -> Result<Response, ContractError> {
-    let token_addr = deps.api.addr_validate(&token)?;
-    let athlete_id = query_token_count(deps.as_ref()).unwrap();
+    let athlete_id = query_athlete_count(deps.as_ref()).unwrap();
+    let mut response = Response::new()
+        .add_attribute("action", "add_tokens");
 
-    token_addresses(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
-        Some(_) => Err(ContractError::Claimed {}),
-        None => Ok(token_addr.clone()),
-    })?;
+    for symbol in symbols {
+        let athlete_info = AthleteInfo {
+            symbol: symbol.clone(),
+            common_count: 0,
+            uncommon_count: 0,
+            rare_count: 0,
+            legendary_count: 0,
+        };
+
+        athlete_list(deps.storage).update::<_, ContractError>(&athlete_id.to_string().as_bytes(), |old| match old {
+            Some(_) => Err(ContractError::Claimed {}),
+            None => Ok(athlete_info.clone()),
+        })?;
+        
+        increment_athlete_count(deps.storage)?;
+
+        response = response.add_attribute("symbol", symbol.clone());
+    }
     
-    increment_token_count(deps.storage)?;
-    
-    Ok(Response::new()
-        .add_attribute("action", "add_tokens")
-        .add_attribute("athlete_id", athlete_id.to_string())
-    )
+    Ok(response)
 }
 
 pub fn execute_token_turnover(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     new_contract: String,
 ) -> Result<Response, ContractError> {
     let new_address = deps.api.addr_validate(&new_contract)?;
-    let token_count = query_token_count(deps.as_ref()).unwrap();
+    let contract_addr = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+
     let mut response = Response::new()
         .add_attribute("action", "token_turnover")
         .add_attribute("from", &env.contract.address)
         .add_attribute("to", &new_address.to_string());
 
-    for athlete_id in 0..token_count {
-        let contract_addr = query_token_address(deps.as_ref(), athlete_id.to_string()).unwrap();
+    let update_msg = TokenMsg::UpdateMinter {
+        minter: new_address.clone().to_string(),
+    };
 
-        let update_msg = TokenMsg::UpdateMinter {
-            minter: new_address.clone().to_string(),
-        };
+    let token_res = encode_msg_execute(
+        to_binary(&update_msg).unwrap(),
+        contract_addr.clone(),
+        vec![]
+    )?;
 
-        let token_res = encode_msg_execute(
-            to_binary(&update_msg).unwrap(),
-            contract_addr.clone(),
-            vec![]
-        )?;
-
-        // TODO: handle error from token_res
-        response = response.add_message(token_res);
-    }
+    // TODO: handle error from token_res
+    response = response.add_message(token_res);
 
     Ok(response)
 }
 
 pub fn execute_lock_token(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
-    athlete_id: String,
     token_id: String,
     duration: String
 ) -> Result<Response, ContractError> {
-    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
-    let mut token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
+    let token_address = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+    let mut token = query_token_info(deps.as_ref(), token_id.clone()).unwrap();
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
@@ -418,7 +417,7 @@ pub fn execute_lock_token(
     //     return Err(ContractError::Unauthorized {});
     // }
 
-    if !query_use_token(deps.as_ref(), athlete_id.clone(), token_id.clone())?{
+    if !query_use_token(deps.as_ref(), token_id.clone())?{
         return Err(ContractError::UsageCapped {});
     }
 
@@ -457,14 +456,13 @@ pub fn execute_lock_token(
 }
 
 pub fn execute_unlock_token(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
-    athlete_id: String,
     token_id: String,
 ) -> Result<Response, ContractError> {
-    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
-    let token = query_token_info(deps.as_ref(), athlete_id.clone(), token_id.clone()).unwrap();
+    let token_address = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+    let token = query_token_info(deps.as_ref(), token_id.clone()).unwrap();
 
     // TODO: Add token ownership authentication when executing this function
     // Use AllNftInfoResponse instead of NftInfoResponse from CW721 package
@@ -472,7 +470,7 @@ pub fn execute_unlock_token(
     //     return Err(ContractError::Unauthorized {});
     // }
 
-    if !query_unlock_token(deps.as_ref(), env, athlete_id.clone(), token_id.clone())?{
+    if !query_unlock_token(deps.as_ref(), env, token_id.clone())?{
         return Err(ContractError::Locked {});
     }
 
@@ -503,12 +501,12 @@ pub fn execute_upgrade_same_token(
     env: Env,
     info: MessageInfo,
     rarity: String,
+    tokens: Vec<String>,
     athlete_id: String, 
-    tokens: Vec<String>
 ) -> Result<Response, ContractError> {
-    let sender = info.sender;
     let athlete_contract = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
     let token_id = generate_token_id(deps.branch().as_ref(), athlete_id.clone(), rarity.clone()).unwrap();
+    let sender = info.sender;
 
     if !query_token_mintable(deps.branch().as_ref(), athlete_id.clone(), rarity.clone())?{    
         return Err(ContractError::Capped {});
@@ -572,8 +570,8 @@ pub fn execute_upgrade_rand_token(
     tokens: Vec<String>,
     rand_seed: String
 ) -> Result<Response, ContractError> {
-    let sender = info.sender;
     let athlete_contract = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+    let sender = info.sender;
 
     let mut response = Response::new()
         .add_attribute("action", "upgrade_rand_token")
@@ -594,9 +592,9 @@ pub fn execute_upgrade_rand_token(
     }
 
     // Generate a list of mintable tokens
-    let token_count = query_token_count(deps.as_ref()).unwrap();
+    let athlete_count = query_athlete_count(deps.as_ref()).unwrap();
     let mut mintable_list = vec![];
-    for n in 0..token_count {
+    for n in 0..athlete_count {
         if query_token_mintable(deps.as_ref(), n.to_string(), rarity.clone()).unwrap_or(false){    
             // Add athlete_id to the mintable list
             // Increment mintable tokens
@@ -656,23 +654,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
         QueryMsg::PackPrice {} => to_binary(&query_pack_price(deps)?),
         QueryMsg::TotalDeposit {} => to_binary(&query_total_deposit(deps)?),
-        QueryMsg::TokenContract {
+        QueryMsg::AthleteInfo {
             athlete_id
-        } => to_binary(&query_token_address(deps, athlete_id)?),
+        } => to_binary(&query_athlete_info(deps, athlete_id)?),
+        QueryMsg::AthleteCount {} => to_binary(&query_athlete_count(deps)?),
         QueryMsg::IsTokenMintable {
             athlete_id,
             rarity,
         } => to_binary(&query_token_mintable(deps, athlete_id, rarity)?),
-        QueryMsg::TokenCount {} => to_binary(&query_token_count(deps)?),
-        QueryMsg::LastRound {} => to_binary(&query_last_round(deps)?),
         QueryMsg::CanUnlockToken {
-            athlete_id,
             token_id
-        } => to_binary(&query_unlock_token(deps, env, athlete_id, token_id)?),
+        } => to_binary(&query_unlock_token(deps, env, token_id)?),
         QueryMsg::CanUseToken {
-            athlete_id,
             token_id
-        } => to_binary(&query_use_token(deps, athlete_id, token_id)?),
+        } => to_binary(&query_use_token(deps, token_id)?),
     }
 }
 
@@ -688,27 +683,8 @@ fn query_total_deposit(
     Ok(Uint128::from(total_deposit(deps.storage)?))
 }
 
-fn query_last_round(
-    deps: Deps,
-) -> StdResult<u64> {
-    LAST_ROUND.load(deps.storage)
-}
-
 fn query_pack_price(deps: Deps) -> StdResult<u64> {
     Ok(CONTRACT_INFO.load(deps.storage)?.pack_price)
-}
-
-fn query_token_address(
-    deps: Deps,
-    athlete_id: String
-) -> StdResult<Addr> {
-    token_addresses_read(deps.storage).load(athlete_id.as_bytes())
-}
-
-fn query_token_count(
-    deps: Deps,
-) -> StdResult<u64> {
-    Ok(token_count(deps.storage)?)
 }
 
 fn query_athlete_info(
@@ -756,10 +732,9 @@ fn query_token_mintable(
 
 fn query_token_info(
     deps: Deps,
-    athlete_id: String,
     token_id: String
 ) -> StdResult<NftInfoResponse> {
-    let token_address = query_token_address(deps, athlete_id).unwrap();
+    let token_address = query_contract_info(deps).unwrap().athlete_addr;
 
     let msg = TokenMsg::NftInfo { token_id: token_id };
     let wasm = WasmQuery::Smart {
@@ -786,10 +761,9 @@ fn query_token_info(
 fn query_unlock_token(
     deps: Deps,
     env: Env,
-    athlete_id: String,
     token_id: String
 ) -> StdResult<bool> {
-    let token = query_token_info(deps, athlete_id.clone(), token_id.clone()).unwrap();
+    let token = query_token_info(deps, token_id.clone()).unwrap();
     let mut can_unlock = false;
     let curr_date = env.block.time;
     let unlock_date = token.extension.unlock_date.unwrap_or_default();
@@ -804,10 +778,9 @@ fn query_unlock_token(
 
 fn query_use_token(
     deps: Deps,
-    athlete_id: String,
     token_id: String
 ) -> StdResult<bool> {
-    let token = query_token_info(deps, athlete_id.clone(), token_id.clone()).unwrap();
+    let token = query_token_info(deps, token_id.clone()).unwrap();
     let mut can_use = false;
 
     if token.extension.usage > 0 {
@@ -866,15 +839,15 @@ fn hex_to_athlete(
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<String>>();
 
-    // Load contract_count from the state
-    let token_count = query_token_count(deps).unwrap();
+    // Load athlete_count from the state
+    let athlete_count = query_athlete_count(deps).unwrap();
 
     let mut athlete_list: Vec<u64> = Vec::new();
     for hex in hex_list.iter(){
         // Convert hexadecimal to decimal
         let deci = u64::from_str_radix(hex, 16).unwrap();
         // Get the athlete IDs by using modulo
-        let athlete_id = deci % token_count;
+        let athlete_id = deci % athlete_count;
 
         athlete_list.push(athlete_id);
     }
