@@ -195,6 +195,8 @@ pub fn execute_purchase(
             funds: vec![],
         });
 
+        update_token_count(deps.branch(), athlete_id.clone(), "C".to_string())?;
+
         /*let mint_res = encode_msg_execute(
             to_binary(&mint_msg).unwrap(),
             token_address.clone(),
@@ -558,6 +560,8 @@ pub fn execute_upgrade_same_token(
         msg: to_binary(&mint_msg).unwrap(),
         funds: vec![],
     });
+
+    update_token_count(deps.branch(), athlete_id.clone(), rarity.clone())?;
     
     Ok(response)
 }
@@ -635,6 +639,8 @@ pub fn execute_upgrade_rand_token(
         msg: to_binary(&mint_msg).unwrap(),
         funds: vec![],
     });
+
+    update_token_count(deps.branch(), athlete_id.clone(), rarity.clone())?;
     
     Ok(response)
 }
@@ -646,6 +652,65 @@ pub fn update_last_round(
 ) -> StdResult<u64> {
     LAST_ROUND.save(deps.storage, &new_round)?;
     Ok(*new_round)
+}
+
+// updates the number of tokens of a given athlete id
+fn update_token_count (
+    deps: DepsMut,
+    athlete_id: String,
+    rarity: String,
+) -> Result<Response, ContractError> {
+    let mut athlete_info = query_athlete_info(deps.as_ref(), athlete_id.clone()).unwrap();
+
+    if rarity.eq("U"){
+        athlete_info.uncommon_count = athlete_info.uncommon_count + 1;
+    } else if rarity.eq("R"){
+        athlete_info.rare_count = athlete_info.rare_count + 1;
+    } else if rarity.eq("L"){
+        athlete_info.legendary_count = athlete_info.legendary_count + 1;
+    } else {
+        athlete_info.common_count = athlete_info.common_count + 1;
+    }
+
+    athlete_list(deps.storage).update::<_, ContractError>(&athlete_id.clone().as_bytes(), |old| match old {
+        Some(_) => Ok(athlete_info),
+        None => Err(ContractError::DoesNotExist {}),
+    })?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_token_count")
+        .add_attribute("athlete_id", athlete_id.clone())
+        .add_attribute("rarity", rarity.clone()))
+}
+
+// returns a string containing contract symbol + token rarity + token count
+fn generate_token_id (
+    deps: Deps,
+    athlete_id: String,
+    rarity: String,
+) -> StdResult<String> {
+
+    let athlete_info = query_athlete_info(deps, athlete_id).unwrap();
+    let mut token_id: String = athlete_info.symbol;
+    
+    let mut rarity_string: &str = "C";
+    let mut token_count = athlete_info.common_count + 1;
+    
+    if rarity.eq("U"){
+        rarity_string = "U"; 
+        token_count = athlete_info.uncommon_count + 1;
+    } else if rarity.eq("R"){
+        rarity_string = "R";
+        token_count = athlete_info.rare_count + 1;
+    } else if rarity.eq("L"){
+        rarity_string = "L";
+        token_count = athlete_info.legendary_count + 1;
+    } 
+
+    token_id.push_str(rarity_string);
+    token_id.push_str(&token_count.to_string());
+
+    Ok(token_id)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -853,34 +918,4 @@ fn hex_to_athlete(
     }
 
     Ok(athlete_list)
-}
-
-// returns a string containing contract symbol + token rarity + token count
-fn generate_token_id (
-    deps: Deps,
-    athlete_id: String,
-    rarity: String,
-) -> StdResult<String> {
-
-    let athlete_info = query_athlete_info(deps, athlete_id).unwrap();
-    let mut token_id: String = athlete_info.symbol;
-    
-    let mut rarity_string: &str = "C";
-    let mut token_count = athlete_info.common_count + 1;
-    
-    if rarity.eq("U"){
-        rarity_string = "U"; 
-        token_count = athlete_info.uncommon_count + 1;
-    } else if rarity.eq("R"){
-        rarity_string = "R";
-        token_count = athlete_info.rare_count + 1;
-    } else if rarity.eq("L"){
-        rarity_string = "L";
-        token_count = athlete_info.legendary_count + 1;
-    } 
-
-    token_id.push_str(rarity_string);
-    token_id.push_str(&token_count.to_string());
-
-    Ok(token_id)
 }
