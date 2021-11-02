@@ -116,10 +116,9 @@ pub fn execute(
         } => execute_upgrade_same_token(deps, env, info, rarity, athlete_id, tokens),
         ExecuteMsg::UpgradeRandToken {
             rarity,
-            athlete_ids,
             tokens,
             rand_seed
-        } => execute_upgrade_rand_token(deps, env, info, rarity, athlete_ids, tokens, rand_seed),
+        } => execute_upgrade_rand_token(deps, env, info, rarity, tokens, rand_seed),
     }
 }
 
@@ -182,8 +181,10 @@ pub fn execute_purchase(
     for index in mint_index_list.iter() {
         let athlete_id = mintable_token_list[*index as usize].to_string();
         let token_address = query_token_address(deps.branch().as_ref(), athlete_id.clone()).unwrap();
+        let token_id = generate_token_id(deps.branch().as_ref(), athlete_id.clone(), "C".to_string()).unwrap();
         
         let mint_msg = TokenMsg::Mint {
+            token_id: token_id,
             owner: sender.clone().to_string(),
             token_uri: None,
             extension: TokenExtension {
@@ -498,7 +499,7 @@ pub fn execute_unlock_token(
 }
 
 pub fn execute_upgrade_same_token(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     rarity: String,
@@ -506,7 +507,12 @@ pub fn execute_upgrade_same_token(
     tokens: Vec<String>
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
-    let token_address = query_token_address(deps.as_ref(), athlete_id.clone()).unwrap();
+    let athlete_contract = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
+    let token_id = generate_token_id(deps.branch().as_ref(), athlete_id.clone(), rarity.clone()).unwrap();
+
+    if !query_token_mintable(deps.branch().as_ref(), athlete_id.clone(), rarity.clone())?{    
+        return Err(ContractError::Capped {});
+    }
 
     let mut response = Response::new()
         .add_attribute("action", "upgrade_same_token")
@@ -520,7 +526,7 @@ pub fn execute_upgrade_same_token(
         };
 
         response = response.add_message(WasmMsg::Execute {
-            contract_addr: token_address.clone().to_string(),
+            contract_addr: athlete_contract.clone().to_string(),
             msg: to_binary(&burn_msg).unwrap(),
             funds: vec![],
         });
@@ -537,6 +543,7 @@ pub fn execute_upgrade_same_token(
     
     // Mint higher rarity token
     let mint_msg = TokenMsg::Mint {
+        token_id: token_id,
         owner: sender.clone().to_string(),
         token_uri: None,
         extension: TokenExtension {
@@ -549,7 +556,7 @@ pub fn execute_upgrade_same_token(
     };
 
     response = response.add_message(WasmMsg::Execute {
-        contract_addr: token_address.clone().to_string(),
+        contract_addr: athlete_contract.clone().to_string(),
         msg: to_binary(&mint_msg).unwrap(),
         funds: vec![],
     });
@@ -562,31 +569,25 @@ pub fn execute_upgrade_rand_token(
     env: Env,
     info: MessageInfo,
     rarity: String,
-    athlete_id: Vec<String>,
     tokens: Vec<String>,
     rand_seed: String
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
-
-    let mut token_address: Vec<String> = vec![];
-    for id in athlete_id.iter() {
-        let addr = query_token_address(deps.as_ref(), id.to_string()).unwrap().to_string();
-        token_address.push(addr)
-    }
+    let athlete_contract = query_contract_info(deps.branch().as_ref()).unwrap().athlete_addr;
 
     let mut response = Response::new()
         .add_attribute("action", "upgrade_rand_token")
         .add_attribute("from", sender.clone());
     
     // Burn fodder tokens
-    for index in 0..2 {
+    for token in tokens {
         let burn_msg = TokenMsg::TransferNft {
             recipient: env.contract.address.to_string(),
-            token_id: tokens[index].clone()
+            token_id: token.clone()
         };
 
         response = response.add_message(WasmMsg::Execute {
-            contract_addr: token_address[index].to_string(),
+            contract_addr: athlete_contract.to_string(),
             msg: to_binary(&burn_msg).unwrap(),
             funds: vec![],
         });
@@ -606,7 +607,7 @@ pub fn execute_upgrade_rand_token(
     // Select random Athlete Token/Address from the mintable list
     let index_list = hex_to_athlete(deps.branch().as_ref(), rand_seed).unwrap();
     let athlete_id = mintable_list[index_list[0] as usize].to_string();
-    let mint_address = query_token_address(deps.branch().as_ref(), athlete_id.clone()).unwrap();
+    let token_id = generate_token_id(deps.branch().as_ref(), athlete_id.clone(), rarity.clone()).unwrap();
 
     let mut usage_cap = 3;
     if rarity.clone().eq("U"){
@@ -619,6 +620,7 @@ pub fn execute_upgrade_rand_token(
 
     // Mint higher rarity token
     let mint_msg = TokenMsg::Mint {
+        token_id: token_id,
         owner: sender.clone().to_string(),
         token_uri: None,
         extension: TokenExtension {
@@ -631,7 +633,7 @@ pub fn execute_upgrade_rand_token(
     };
     
     response = response.add_message(WasmMsg::Execute {
-        contract_addr: mint_address.clone().to_string(),
+        contract_addr: athlete_contract.clone().to_string(),
         msg: to_binary(&mint_msg).unwrap(),
         funds: vec![],
     });
@@ -878,4 +880,34 @@ fn hex_to_athlete(
     }
 
     Ok(athlete_list)
+}
+
+// returns a string containing contract symbol + token rarity + token count
+fn generate_token_id (
+    deps: Deps,
+    athlete_id: String,
+    rarity: String,
+) -> StdResult<String> {
+
+    let athlete_info = query_athlete_info(deps, athlete_id).unwrap();
+    let mut token_id: String = athlete_info.symbol;
+    
+    let mut rarity_string: &str = "C";
+    let mut token_count = athlete_info.common_count + 1;
+    
+    if rarity.eq("U"){
+        rarity_string = "U"; 
+        token_count = athlete_info.uncommon_count + 1;
+    } else if rarity.eq("R"){
+        rarity_string = "R";
+        token_count = athlete_info.rare_count + 1;
+    } else if rarity.eq("L"){
+        rarity_string = "L";
+        token_count = athlete_info.legendary_count + 1;
+    } 
+
+    token_id.push_str(rarity_string);
+    token_id.push_str(&token_count.to_string());
+
+    Ok(token_id)
 }

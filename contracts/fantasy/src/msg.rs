@@ -107,8 +107,6 @@ pub enum ExecuteMsg {
     UpgradeRandToken {
         /// Describes the rarity of the NFT 
         rarity: String,
-        /// Athlete IDs of the NFTs to be burned
-        athlete_ids: Vec<String>,
         /// NFTs to burn
         tokens: Vec<String>,
         /// Seed to be used for minting a random new token
@@ -160,7 +158,7 @@ pub enum QueryMsg {
 pub enum TokenMsg {
     Mint {
         /// Unique ID of the NFT
-        // token_id: String,
+        token_id: String,
         /// The owner of the newly minter NFT
         owner: String,
         /// Universal Resource Identifier link of the NFT
