@@ -31,4 +31,7 @@ pub enum ContractError {
 
     #[error("Something went wrong")]
     DefaultErr {},
+
+    #[error("Athlete ID does not exist")]
+    DoesNotExist {},
 }

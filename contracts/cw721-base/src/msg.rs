@@ -10,15 +10,11 @@ pub struct InstantiateMsg {
     pub name: String,
     /// Symbol of the NFT contract
     pub symbol: String,
+
     /// The minter is the only one who can create new NFTs.
     /// This is designed for a base NFT that is controlled by an external program
     /// or contract. You will likely replace this with custom logic in custom NFTs
     pub minter: String,
-    // Maximum number of each rarity
-    pub common_cap: u64,
-    pub uncommon_cap: u64,
-    pub rare_cap: u64,
-    pub legendary_cap: u64,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner
@@ -56,29 +52,28 @@ pub enum ExecuteMsg<T> {
 
     /// Mint a new NFT, can only be called by the contract minter
     Mint(MintMsg<T>),
-    /// Updates a token's metadata information
+
+    /// Updates authorized minter
+    UpdateMinter { minter: String },
+
+    /// Updates token metadata
     UpdateToken {
         token_id: String,
         token_uri: Option<String>,
-        extension: Option<T>
-    },
-    /// Change the minter for the token, can only be called by the current minter
-    UpdateMinter {
-        /// Address of the new minter
-        minter: String,
+        extension: Option<T>,
     },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MintMsg<T> {
+    /// Unique ID of the NFT
+    pub token_id: String,
     /// The owner of the newly minter NFT
     pub owner: String,
     /// Universal resource identifier for this NFT
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
     /// Any custom extension used by this contract
     pub extension: T,
 }
@@ -103,10 +98,7 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Total number of tokens issued
-    CommonTokens {},
-    UncommonTokens {},
-    RareTokens{},
-    LegendaryTokens{},
+    NumTokens {},
 
     /// With MetaData Extension.
     /// Returns top-level metadata about the contract: `ContractInfoResponse`
@@ -144,10 +136,6 @@ pub enum QueryMsg {
 
     // Return the minter
     Minter {},
-    /// Returns a boolean determining if the token is mintable
-    IsMintable {
-        rarity: String,
-    },
 }
 
 /// Shows who can mint these tokens

@@ -9,20 +9,31 @@ use cosmwasm_bignumber::{Uint256, Decimal256};
 pub struct InstantiateMsg {
     /// Stable coin denomination. 
     pub stable_denom: String,
-    // anchor contract address for depositing the rewards
+    /// anchor contract address for depositing the rewards
     pub anchor_addr: String,
-    // terrand contract address for calling Oracle's DRand
+    /// terrand contract address for calling Oracle's DRand
     pub terrand_addr: String,
-    // Number of Player NFTs to be pulled per pack
-    pub pack_len: u64,
-    // Price of each pack
-    pub pack_price: u64,
     /// contract admin
     pub admin_addr: String,
-}
+    /// contract address for the CW721 Athlete contract
+    pub athlete_addr: String,
+    /// Number of Player NFTs to be pulled per pack
+    pub pack_len: u64,
+    /// Price of each pack
+    pub pack_price: u64,
+    // Maximum number tokens to be minted for each rarity
+    pub common_cap: u64,
+    pub uncommon_cap: u64,
+    pub rare_cap: u64,
+    pub legendary_cap: u64,
+}  
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct TokenExtension {
+    /// Reference ID of the Athlete Token
+    pub athlete_id: String,
+    /// Describes the rarity of the NFT 
+    pub rarity: String,
     /// Determines whether or not the NFT is locked for Fantasy Sports
     pub is_locked: bool,
     /// Determines the unlock date after the NFT has been locked
@@ -35,8 +46,6 @@ pub struct TokenExtension {
 pub struct NftInfoResponse {
     /// Universal Resource Identifier link of the NFT
     pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
     /// Additional Metadata of Fantasy Athlete tokens
     pub extension: TokenExtension,
 }
@@ -61,18 +70,20 @@ pub enum ExecuteMsg {
     Transfer {
         amount: Uint128
     },
-    /// Add athlete token contract address
-    AddToken {
-        token: String,
+    /// Add athlete token information
+    AddAthlete {
+        symbols: Vec<String>,
     },
     /// Performs the turnover of tokens to another instance of Fantasy contract
     TokenTurnover {
         new_contract: String
     },
+    /// Updates Athlete Contract address
+    UpdateCW721 {
+        new_contract: String
+    },
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
     LockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
         /// Time before a token can be unlocked
@@ -80,8 +91,6 @@ pub enum ExecuteMsg {
     },
     /// Checks and unlocks an NFT token if it can be unlocked, can only be called by the NFT owner 
     UnlockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Unique ID of the NFT
         token_id: String,
     },
@@ -89,17 +98,15 @@ pub enum ExecuteMsg {
     UpgradeSameToken {
         /// Describes the rarity of the NFT 
         rarity: String,
-        /// Athlete ID of the NFTs to be burned
-        athlete_id: String,
         /// NFTs to burn
         tokens: Vec<String>,
+        /// Athlete ID of the NFTs to be burned/minted
+        athlete_id: String,
     },
     /// Exchanges any Athlete tokens of the same rarity for a random higher rarity token
     UpgradeRandToken {
         /// Describes the rarity of the NFT 
         rarity: String,
-        /// Athlete IDs of the NFTs to be burned
-        athlete_ids: Vec<String>,
         /// NFTs to burn
         tokens: Vec<String>,
         /// Seed to be used for minting a random new token
@@ -114,32 +121,26 @@ pub enum QueryMsg {
     ContractInfo {},
     /// Returns the price for purchasing a pack
     PackPrice {},
-    /// Returns the contract address of the corresponding token id
-    TokenContract {
-        athlete_id: String,
-    },
     /// Returns the total deposited stable coin amount to Anchor
     TotalDeposit {},
-    /// Returns a boolean if the token is mintable using the Athlete Contract's IsMintable{} Query
+    /// Returns the token information of the corresponding Athlete id
+    AthleteInfo {
+        athlete_id: String,
+    },
+    /// Returns the total number of unique Athlete tokens saved 
+    AthleteCount {},
+    /// Returns a boolean if the token is mintable
     IsTokenMintable {
         athlete_id: String,
         rarity: String,
     },
-    /// Returns the total number of Athlete Contracts saved 
-    TokenCount {},
-    /// Returns the last round used for Terrand
-    LastRound {},
     /// Checks if a locked NFT can be unlocked
     CanUnlockToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },
     /// Checks if an NFT can be locked up for a game
     CanUseToken {
-        /// Athlete ID of the NFT
-        athlete_id: String,
         /// Token ID of the NFT to be queried
         token_id: String,
     },
@@ -150,12 +151,12 @@ pub enum QueryMsg {
 #[serde(rename_all = "snake_case")]
 pub enum TokenMsg {
     Mint {
+        /// Unique ID of the NFT
+        token_id: String,
         /// The owner of the newly minter NFT
         owner: String,
         /// Universal Resource Identifier link of the NFT
         token_uri: Option<String>,
-        /// Describes the rarity of the NFT 
-        rarity: String,
         /// Additional Metadata of Fantasy Athlete tokens
         extension: TokenExtension
     },
@@ -180,10 +181,6 @@ pub enum TokenMsg {
     NftInfo {
         /// Token ID of the NFT to be queried
         token_id: String,
-    },
-    IsMintable {
-        /// Describes the rarity of the NFT 
-        rarity: String,
     },
 }
 

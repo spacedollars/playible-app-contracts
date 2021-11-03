@@ -88,11 +88,6 @@ pub struct NumTokensResponse {
 pub struct ContractInfoResponse {
     pub name: String,
     pub symbol: String,
-    /// cap is the maximum number of tokens that could be minted
-    pub common_cap: u64,
-    pub uncommon_cap: u64,
-    pub rare_cap: u64,
-    pub legendary_cap: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -101,8 +96,6 @@ pub struct NftInfoResponse<T> {
     /// Should point to a JSON file that conforms to the ERC721
     /// Metadata JSON Schema
     pub token_uri: Option<String>,
-    /// Describes the rarity of the NFT 
-    pub rarity: String,
     /// You can add any custom metadata here when you extend cw721-base
     pub extension: T,
 }
