@@ -209,6 +209,17 @@ dependencies = [
 [[package]]
 name = "cw20"
 version = "0.9.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw0",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw20"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac49b013ca1e355fd988cc1926acc9a16d7fd45cfb595ee330455582a788b100"
 dependencies = [
@@ -216,6 +227,21 @@ dependencies = [
  "cw0",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "cw20-base"
+version = "0.9.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw0",
+ "cw2",
+ "cw20 0.9.1",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -312,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "fantasy"
-version = "0.8.1"
+version = "0.9.1"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -320,7 +346,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
- "cw20",
+ "cw20 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "schemars",
  "serde",
