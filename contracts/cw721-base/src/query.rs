@@ -197,7 +197,8 @@ where
             } => to_binary(&self.tokens(deps, owner, start_after, limit)?),
             QueryMsg::AllTokens { start_after, limit } => {
                 to_binary(&self.all_tokens(deps, start_after, limit)?)
-            }
+            },
+            QueryMsg::NftContractInfo {} => to_binary(&self.nft_contract_info(deps.storage)?),
         }
     }
 }

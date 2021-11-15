@@ -8,11 +8,44 @@ use cosmwasm_std::{Addr, BlockInfo, StdResult, Storage};
 use cw721::{ContractInfoResponse, CustomMsg, Cw721, Expiration};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct NftListing {
+    pub label: String,
+    pub listing_uri: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct NftContractInfo {
+    pub description: Option<String>,
+    pub src: Option<String>,
+    pub banner_src: Option<String>,
+    pub twitter: Option<String>,
+    pub github: Option<String>,
+    pub discord: Option<String>,
+    pub telegram: Option<String>,
+    pub listing: Vec<NftListing>,
+}
+impl Default for NftContractInfo {
+    fn default() -> Self {
+        NftContractInfo {
+            description: None,
+            src: None,
+            banner_src: None,
+            twitter: None,
+            github: None,
+            discord: None,
+            telegram: None,
+            listing: vec![],
+        }
+    }
+}
+
 pub struct Cw721Contract<'a, T, C>
 where
     T: Serialize + DeserializeOwned + Clone,
 {
     pub contract_info: Item<'a, ContractInfoResponse>,
+    pub nft_contract_info: Item<'a, NftContractInfo>,
     pub minter: Item<'a, Addr>,
     pub token_count: Item<'a, u64>,
     /// Stored as (granter, operator) giving operator full control over granter's account
@@ -42,6 +75,7 @@ where
             "operators",
             "tokens",
             "tokens__owner",
+            "nft_contract_info",
         )
     }
 }
@@ -57,6 +91,7 @@ where
         operator_key: &'a str,
         tokens_key: &'a str,
         tokens_owner_key: &'a str,
+        nft_contract_info_key: &'a str,
     ) -> Self {
         let indexes = TokenIndexes {
             owner: MultiIndex::new(token_owner_idx, tokens_key, tokens_owner_key),
@@ -67,6 +102,7 @@ where
             token_count: Item::new(token_count_key),
             operators: Map::new(operator_key),
             tokens: IndexedMap::new(tokens_key, indexes),
+            nft_contract_info: Item::new(nft_contract_info_key),
             _custom_response: PhantomData,
         }
     }
@@ -79,6 +115,13 @@ where
         let val = self.token_count(storage)? + 1;
         self.token_count.save(storage, &val)?;
         Ok(val)
+    }
+
+    pub fn nft_contract_info(&self, storage: &dyn Storage) -> StdResult<NftContractInfo> {
+        Ok(self
+            .nft_contract_info
+            .may_load(storage)?
+            .unwrap_or_default())
     }
 }
 
