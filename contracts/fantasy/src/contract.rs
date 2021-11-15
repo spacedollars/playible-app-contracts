@@ -47,6 +47,7 @@ pub fn instantiate(
     let anchor_contract = deps.api.addr_validate(&msg.anchor_addr)?;
     let terrand_contract = deps.api.addr_validate(&msg.terrand_addr)?;
     let athlete_contract = deps.api.addr_validate(&msg.athlete_addr)?;
+    let marketplace_contract = deps.api.addr_validate(&msg.marketplace_addr)?;
     let admin_addr = deps.api.addr_validate(&msg.admin_addr)?;
 
     let info = ContractInfoResponse {
@@ -55,6 +56,7 @@ pub fn instantiate(
         terrand_addr: terrand_contract,
         admin_addr: admin_addr,
         athlete_addr: athlete_contract,
+        marketplace_addr: marketplace_contract,
         pack_len: msg.pack_len,
         pack_price: msg.pack_price,
         common_cap: msg.common_cap,
@@ -99,6 +101,9 @@ pub fn execute(
         ExecuteMsg::UpdateCW721 {
             new_contract
         } => execute_update_cw721(deps, env, info, new_contract),
+        ExecuteMsg::UpdateMarketplace {
+            new_contract
+        } => execute_update_marketplace(deps, env, info, new_contract),
         ExecuteMsg::LockToken {
             token_id,
             duration
@@ -431,6 +436,7 @@ pub fn execute_update_cw721(
         terrand_addr: contract_info.terrand_addr,
         admin_addr: contract_info.admin_addr.clone(),
         athlete_addr: new_address.clone(),
+        marketplace_addr: contract_info.marketplace_addr,
         pack_len: contract_info.pack_len,
         pack_price: contract_info.pack_price,
         common_cap: contract_info.common_cap,
@@ -443,6 +449,43 @@ pub fn execute_update_cw721(
 
     Ok(Response::new()
         .add_attribute("action", "update_cw721")
+        .add_attribute("from", old_address.clone())
+        .add_attribute("to", new_address.clone()))
+}
+
+pub fn execute_update_marketplace(
+    mut deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    new_contract: String,
+) -> Result<Response, ContractError> {
+    let contract_info = query_contract_info(deps.as_ref()).unwrap();
+    let new_address = deps.api.addr_validate(&new_contract)?;
+    let old_address = contract_info.marketplace_addr;
+
+    if info.sender != contract_info.admin_addr.clone() {
+        return Err(ContractError::Unauthorized{})
+    }
+
+    let info = ContractInfoResponse {
+        stable_denom: contract_info.stable_denom,
+        anchor_addr: contract_info.anchor_addr,
+        terrand_addr: contract_info.terrand_addr,
+        admin_addr: contract_info.admin_addr.clone(),
+        athlete_addr: contract_info.athlete_addr,
+        marketplace_addr: new_address.clone(),
+        pack_len: contract_info.pack_len,
+        pack_price: contract_info.pack_price,
+        common_cap: contract_info.common_cap,
+        uncommon_cap: contract_info.uncommon_cap,
+        rare_cap: contract_info.rare_cap,
+        legendary_cap: contract_info.legendary_cap
+    };
+
+    CONTRACT_INFO.save(deps.branch().storage, &info)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_marketplace")
         .add_attribute("from", old_address.clone())
         .add_attribute("to", new_address.clone()))
 }
