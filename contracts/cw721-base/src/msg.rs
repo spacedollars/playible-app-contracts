@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::Binary;
 use cw721::Expiration;
 
+use crate::state::{NftListing};
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     /// Name of the NFT contract
@@ -61,6 +63,18 @@ pub enum ExecuteMsg<T> {
         token_id: String,
         token_uri: Option<String>,
         extension: Option<T>,
+    },
+
+    /// Owner message: Set information about the NFT Collection
+    SetNftContractInfo {
+        description: Option<String>,
+        src: Option<String>,
+        banner_src: Option<String>,
+        twitter: Option<String>,
+        github: Option<String>,
+        discord: Option<String>,
+        telegram: Option<String>,
+        listing: Vec<NftListing>,
     },
 }
 
@@ -136,6 +150,9 @@ pub enum QueryMsg {
 
     // Return the minter
     Minter {},
+
+    /// Returns top-level NFT metadata about the contract: `NFTContractInfoResponse`
+    NftContractInfo {},
 }
 
 /// Shows who can mint these tokens

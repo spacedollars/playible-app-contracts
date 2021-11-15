@@ -8,7 +8,7 @@ use cw721::{ContractInfoResponse, CustomMsg, Cw721Execute, Cw721ReceiveMsg, Expi
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MintMsg};
-use crate::state::{Approval, Cw721Contract, TokenInfo};
+use crate::state::{Approval, Cw721Contract, NftListing, TokenInfo};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw721-base";
@@ -76,6 +76,28 @@ where
                 token_uri,
                 extension,
             } => self.update_token(deps, env, info, token_id, token_uri, extension),   
+            ExecuteMsg::SetNftContractInfo {
+                description,
+                src,
+                banner_src,
+                twitter,
+                github,
+                discord,
+                telegram,
+                listing,
+            } => self.set_nft_contract_info(
+                deps,
+                env,
+                info,
+                description,
+                src,
+                banner_src,
+                twitter,
+                github,
+                discord,
+                telegram,
+                listing,
+            ),
         }
     }
 }
@@ -161,6 +183,50 @@ where
         Ok(Response::new()
             .add_attribute("action", "update_token")
             .add_attribute("token_id", token_id.clone()))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_nft_contract_info(
+        &self,
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        description: Option<String>,
+        src: Option<String>,
+        banner_src: Option<String>,
+        twitter: Option<String>,
+        github: Option<String>,
+        discord: Option<String>,
+        telegram: Option<String>,
+        listing: Vec<NftListing>,
+    ) -> Result<Response<C>, ContractError> {
+        let minter = self.minter.load(deps.storage)?;
+
+        if info.sender != minter {
+            return Err(ContractError::Unauthorized {});
+        }
+        let nft_contract_info = crate::state::NftContractInfo {
+            description,
+            src,
+            banner_src,
+            twitter,
+            github,
+            discord,
+            telegram,
+            listing,
+        };
+        match serde_json_wasm::to_string(&nft_contract_info) {
+            Ok(json) => {
+                self.nft_contract_info
+                    .save(deps.storage, &nft_contract_info)?;
+
+                Ok(Response::new()
+                    .add_attribute("action", "approve")
+                    .add_attribute("sender", info.sender)
+                    .add_attribute("nft_contract_info", &json))
+            }
+            Err(e) => Err(ContractError::JsonSerError(e)),
+        }
     }
 }
 

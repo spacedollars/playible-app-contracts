@@ -17,6 +17,8 @@ pub struct ContractInfoResponse {
     pub admin_addr: Addr,
     /// contract address for the CW721 Athlete contract
     pub athlete_addr: Addr,
+    /// contract address for the Marketplace contract
+    pub marketplace_addr: Addr,
     /// number of NFT players to be pulled per pack
     pub pack_len: u64,
     /// price of each pack

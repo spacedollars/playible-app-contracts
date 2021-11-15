@@ -17,6 +17,8 @@ pub struct InstantiateMsg {
     pub admin_addr: String,
     /// contract address for the CW721 Athlete contract
     pub athlete_addr: String,
+    /// contract address for the Marketplace contract
+    pub marketplace_addr: String,
     /// Number of Player NFTs to be pulled per pack
     pub pack_len: u64,
     /// Price of each pack
@@ -80,6 +82,10 @@ pub enum ExecuteMsg {
     },
     /// Updates Athlete Contract address
     UpdateCW721 {
+        new_contract: String
+    },
+    /// Updates Marketplace Contract address
+    UpdateMarketplace {
         new_contract: String
     },
     /// Locks an NFT token to be played for Fantasy Sports, can only be called by the NFT owner
