@@ -11,27 +11,15 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("token_id already claimed")]
-    Claimed {},
-
-    #[error("You need to send exactly {}{} to purchase a pack", amount, denom)]
+    #[error("You need to send exactly {}{} to purchase this token", amount, denom)]
     WrongAmount { amount: u64, denom: String },
 
-    #[error("The current round has already been used. Please wait for the next round")]
-    UsedRound {},
+    #[error("The collection address is invalid")]
+    InvalidCollection {},
 
-    #[error("Minting cannot exceed the cap")]
-    Capped {},
+    #[error("The token owner address is invalid")]
+    InvalidOwner {},
 
-    #[error("Token cannot be unlocked at this time")]
-    Locked {},
-
-    #[error("Token has reached its maximum number of usages")]
-    UsageCapped {},
-
-    #[error("Something went wrong")]
-    DefaultErr {},
-
-    #[error("Athlete ID does not exist")]
-    DoesNotExist {},
+    #[error("The token buyer address is invalid")]
+    InvalidBuyer {},
 }

@@ -11,7 +11,6 @@ use cosmwasm_std::{
     CosmosMsg
 };
 use cw20::{BalanceResponse};
-use crate::msg::{LatestRandomResponse};
 
 pub fn encode_msg_execute(
     msg: Binary,
@@ -43,20 +42,4 @@ pub fn encode_msg_query(msg: Binary, address: Addr) -> StdResult<QueryRequest<Em
         msg: msg,
     }
     .into())
-}
-
-pub fn wrapper_msg_get_randomness(
-    deps: Deps,
-    query: QueryRequest<Empty>,
-) -> StdResult<LatestRandomResponse> {
-    let res: LatestRandomResponse = deps.querier.query(&query)?;
-    Ok(res)
-}
-
-pub fn wrapper_msg_anchor_balance(
-    deps: Deps,
-    query: QueryRequest<Empty>,
-) -> StdResult<BalanceResponse> {
-    let res: BalanceResponse = deps.querier.query(&query)?;
-    Ok(res)
 }

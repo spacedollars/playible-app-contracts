@@ -123,7 +123,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Returns the contract info for the Fantasy Contract
+    /// Returns the contract info for the Playible Contract
     ContractInfo {},
     /// Returns the price for purchasing a pack
     PackPrice {},
