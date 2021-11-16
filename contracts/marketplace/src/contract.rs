@@ -159,11 +159,11 @@ fn query_temp_is_valid(
 ) -> StdResult<bool> {
 
     let contract_info = query_contract_info(deps).unwrap();
-    let token_info = query_token_info(deps, contract_addr.clone(), token_id.clone(),).unwrap();
+    let token_owner = query_token_owner(deps, contract_addr.clone(), token_id.clone(),).unwrap();
     let mut is_valid = false;
     
     // If the token owner matches provided owner address
-    if token_info.owner == owner_addr.clone() {
+    if token_owner.owner == owner_addr.clone() {
         // If token buyer address matches sender address
         if sender != buyer_addr.clone() {
             // If the provided funds matches the listed sale price
@@ -178,7 +178,7 @@ fn query_temp_is_valid(
     Ok(is_valid)
 }
 
-fn query_token_info(
+fn query_token_owner(
     deps: Deps,
     contract_addr: Addr,
     token_id: String
