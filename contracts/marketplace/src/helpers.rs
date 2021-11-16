@@ -10,7 +10,6 @@ use cosmwasm_std::{
     WasmQuery, 
     CosmosMsg
 };
-use cw20::{BalanceResponse};
 
 pub fn encode_msg_execute(
     msg: Binary,

@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    StdError
-};
+use cosmwasm_std::{ StdError, Uint128 };
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -12,7 +10,7 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("You need to send exactly {}{} to purchase this token", amount, denom)]
-    WrongAmount { amount: u64, denom: String },
+    WrongAmount { amount: Uint128, denom: String },
 
     #[error("The collection address is invalid")]
     InvalidCollection {},
@@ -22,4 +20,7 @@ pub enum ContractError {
 
     #[error("The token buyer address is invalid")]
     InvalidBuyer {},
+
+    #[error("The token buyer address does not match sender address")]
+    BuyerMismatch {},
 }

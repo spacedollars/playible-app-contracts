@@ -1,9 +1,7 @@
-use cosmwasm_std::{Binary, CanonicalAddr, Uint128, Timestamp};
+use cosmwasm_std::{ Uint128 };
 use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_bignumber::{Uint256, Decimal256};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -11,6 +9,8 @@ pub struct InstantiateMsg {
     pub name: String,
     /// contract admin
     pub admin_addr: String,
+    /// Stable coin denomination. 
+    pub stable_denom: String,
 }  
 
 
