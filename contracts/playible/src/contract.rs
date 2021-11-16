@@ -32,7 +32,7 @@ use crate::helpers::{
 use crate::querier::{deduct_tax};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:fantasy";
+const CONTRACT_NAME: &str = "crates.io:playible";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
