@@ -81,8 +81,8 @@ pub fn execute(
             price
         } => execute_temp_transaction(deps, env, info, contract_addr, owner_addr, token_id, buyer_addr, price),
         ExecuteMsg::SetAdmin { 
-            new_contract 
-        } => set_admin_addr(deps, info, new_contract),
+            new_addr 
+        } => set_admin_addr(deps, info, new_addr),
         ExecuteMsg::SetPublicKey { 
             public_key 
         } => set_public_key(deps, info, public_key),
@@ -162,11 +162,11 @@ pub fn execute_temp_transaction(
 pub fn set_admin_addr(
     mut deps: DepsMut,
     info: MessageInfo,
-    new_contract: String,
+    new_addr: String,
 ) -> Result<Response, ContractError> {
 
     let contract_info = query_contract_info(deps.as_ref()).unwrap();
-    let new_address = deps.api.addr_validate(&new_contract)?;
+    let new_address = deps.api.addr_validate(&new_addr)?;
     let old_address = contract_info.admin_addr;
 
     if info.sender != old_address.clone() {
@@ -185,7 +185,7 @@ pub fn set_admin_addr(
     Ok(Response::new()
         .add_attribute("action", "update_admin_addr")
         .add_attribute("from", old_address.clone())
-        .add_attribute("to", new_address.clone()))
+        .add_attribute("to", new_addr.clone()))
 }
 
 pub fn set_public_key(

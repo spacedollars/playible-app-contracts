@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
         price: Uint128
     }, 
     /// Admin function: change admin address
-    SetAdmin { new_contract: String },
+    SetAdmin { new_addr: String },
     /// Admin function: change public key
     SetPublicKey { public_key: String },
 }
