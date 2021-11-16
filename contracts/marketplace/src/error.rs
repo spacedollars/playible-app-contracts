@@ -12,15 +12,12 @@ pub enum ContractError {
     #[error("You need to send exactly {}{} to purchase this token", amount, denom)]
     WrongAmount { amount: Uint128, denom: String },
 
-    #[error("The collection address is invalid")]
-    InvalidCollection {},
-
-    #[error("The token owner address is invalid")]
-    InvalidOwner {},
-
-    #[error("The token buyer address is invalid")]
-    InvalidBuyer {},
-
     #[error("The token buyer address does not match sender address")]
     BuyerMismatch {},
+
+    #[error("The token is not owned by the provided owner address")]
+    InvalidToken {},
+
+    #[error("The provided message is invalid")]
+    InvalidMessage {},
 }

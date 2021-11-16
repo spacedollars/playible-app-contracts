@@ -1,23 +1,23 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, BankMsg, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
+    to_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, WasmQuery, WasmMsg, 
-    Coin, Uint128
+    Coin, Uint128, Addr
 };
 
 use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg};
+// use cw20::{Cw20ExecuteMsg};
 
 use crate::error::ContractError;
-use crate::msg::{ InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg };
+use crate::msg::{ InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg, OwnerOfResponse };
 use crate::state::{ ContractInfoResponse, CONTRACT_INFO };
-use crate::helpers::{
-    encode_msg_execute,
-    encode_raw_query,
-    encode_msg_query,
-};
-use crate::querier::{deduct_tax};
+// use crate::helpers::{
+//     encode_msg_execute,
+//     encode_raw_query,
+//     encode_msg_query,
+// };
+// use crate::querier::{deduct_tax};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:marketplace";
@@ -74,21 +74,32 @@ pub fn execute_temp_transaction(
     price: Uint128
 ) -> Result<Response, ContractError> {
 
-    let contract_info = query_contract_info(deps.as_ref()).unwrap();
-
     let collection = deps.api.addr_validate(&contract_addr)?;
     let owner = deps.api.addr_validate(&owner_addr)?;
     let buyer = deps.api.addr_validate(&buyer_addr)?;
 
-    if info.sender != buyer.clone() {
-        return Err(ContractError::BuyerMismatch{})
+    if !query_temp_is_valid(
+        deps.as_ref(), 
+        collection.clone(),
+        owner.clone(),
+        token_id.clone(),
+        buyer.clone(),
+        price.clone(),
+        info.sender,
+        info.funds
+    )?{
+        return Err(ContractError::InvalidMessage {});
     }
 
-    if info.funds.len() != 1 || 
-        info.funds[0].denom != contract_info.stable_denom || 
-        info.funds[0].amount != price.clone() {
-        return Err(ContractError::WrongAmount{amount: price.clone(), denom: contract_info.stable_denom})
-    }
+    // if info.sender != buyer.clone() {
+    //     return Err(ContractError::BuyerMismatch{})
+    // }
+
+    // if info.funds.len() != 1 || 
+    //     info.funds[0].denom != contract_info.stable_denom || 
+    //     info.funds[0].amount != price.clone() {
+    //     return Err(ContractError::WrongAmount{amount: price.clone(), denom: contract_info.stable_denom})
+    // }
 
     let mut response = Response::new()
         .add_attribute("action", "temp_transaction")
@@ -124,16 +135,9 @@ pub fn execute_temp_transaction(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
-        QueryMsg::TempIsValid {
-            contract_addr,
-            owner_addr,
-            token_id,
-            buyer_addr,
-            price
-        } => to_binary(&query_temp_is_valid(deps, env, contract_addr, owner_addr, token_id, buyer_addr, price)?),
     }
 }
 
@@ -145,18 +149,48 @@ fn query_contract_info(
 
 fn query_temp_is_valid(
     deps: Deps,
-    _env: Env,
-    contract_addr: String,
-    owner_addr: String,
-    _token_id: String,
-    buyer_addr: String,
-    _price: Uint128
+    contract_addr: Addr,
+    owner_addr: Addr,
+    token_id: String,
+    buyer_addr: Addr,
+    price: Uint128,
+    sender: Addr,
+    funds: Vec<Coin>
 ) -> StdResult<bool> {
 
-    let _collection = deps.api.addr_validate(&contract_addr)?;
-    let _owner = deps.api.addr_validate(&owner_addr)?;
-    let _buyer = deps.api.addr_validate(&buyer_addr)?;
-    let is_valid = false;
+    let contract_info = query_contract_info(deps).unwrap();
+    let token_info = query_token_info(deps, contract_addr.clone(), token_id.clone(),).unwrap();
+    let mut is_valid = false;
+    
+    // If the token owner matches provided owner address
+    if token_info.owner == owner_addr.clone() {
+        // If token buyer address matches sender address
+        if sender != buyer_addr.clone() {
+            // If the provided funds matches the listed sale price
+            if funds.len() != 1 || 
+               funds[0].denom != contract_info.stable_denom || 
+               funds[0].amount != price.clone() {
+                is_valid = true;
+            }
+        }
+    }
 
     Ok(is_valid)
+}
+
+fn query_token_info(
+    deps: Deps,
+    contract_addr: Addr,
+    token_id: String
+) -> StdResult<OwnerOfResponse> {
+
+    let msg = TokenMsg::OwnerOf { token_id: token_id, include_expired: None };
+    let wasm = WasmQuery::Smart {
+        contract_addr: contract_addr.to_string(),
+        msg: to_binary(&msg)?,
+    };
+
+    let all_nft_info = deps.querier.query::<OwnerOfResponse>(&wasm.into())?;
+
+    Ok(all_nft_info)
 }

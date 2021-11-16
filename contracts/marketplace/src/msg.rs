@@ -1,7 +1,8 @@
 use cosmwasm_std::{ Uint128 };
-use cw20::{Cw20ReceiveMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use cw0::Expiration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -33,14 +34,6 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Returns the contract info for the Marketplace Contract
     ContractInfo {},
-    /// Mock function for querying if a signed message is valid
-    TempIsValid {
-        contract_addr: String,
-        owner_addr: String,
-        token_id: String,
-        buyer_addr: String,
-        price: Uint128
-    },
 }
 
 
@@ -48,14 +41,34 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenMsg {
+    /// Transfer is a base message to move a token to another account without triggering actions
     TransferNft { 
         /// Burn Address (Fantasy Contract Address)
         recipient: String, 
         /// Token ID of the NFT to be transferred/burned
         token_id: String 
     },
-    NftInfo {
-        /// Token ID of the NFT to be queried
+    /// Return the owner of the given token, error if token does not exist
+    /// Return type: OwnerOfResponse
+    OwnerOf {
         token_id: String,
+        /// unset or false will filter out expired approvals, you must set to true to see them
+        include_expired: Option<bool>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct OwnerOfResponse {
+    /// Owner of the token
+    pub owner: String,
+    /// If set this address is approved to transfer/send the token as well
+    pub approvals: Vec<Approval>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct Approval {
+    /// Account that can transfer/send the token
+    pub spender: String,
+    /// When the Approval expires (maybe Expiration::never)
+    pub expires: Expiration,
 }
