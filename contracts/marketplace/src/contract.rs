@@ -233,6 +233,8 @@ fn check_pubkey(data: &[u8]) -> Result<(), ContractError> {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ContractInfo {} => to_binary(&query_contract_info(deps)?),
+        QueryMsg::Admin {} => to_binary(&query_admin(deps)?),
+        QueryMsg::PublicKey {} => to_binary(&query_public_key(deps)?),
     }
 }
 
@@ -240,6 +242,18 @@ fn query_contract_info(
     deps: Deps,
 ) -> StdResult<ContractInfoResponse> {
     CONTRACT_INFO.load(deps.storage)
+}
+
+fn query_admin(
+    deps: Deps,
+) -> StdResult<String> {
+    Ok(query_contract_info(deps).unwrap().admin_addr.to_string())
+}
+
+fn query_public_key(
+    deps: Deps,
+) -> StdResult<String> {
+    Ok(query_contract_info(deps).unwrap().public_key)
 }
 
 fn query_temp_is_valid(

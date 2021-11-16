@@ -40,6 +40,10 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Returns the contract info for the Marketplace Contract
     ContractInfo {},
+    /// Return the admin
+    Admin {},
+    /// Return the public key that is being used to validate messages with signatures
+    PublicKey {},
 }
 
 
