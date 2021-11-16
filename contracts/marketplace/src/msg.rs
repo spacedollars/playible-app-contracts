@@ -12,6 +12,8 @@ pub struct InstantiateMsg {
     pub admin_addr: String,
     /// Stable coin denomination. 
     pub stable_denom: String,
+    /// public key that can sign transaction messages
+    pub public_key: String,
 }  
 
 
@@ -26,6 +28,10 @@ pub enum ExecuteMsg {
         buyer_addr: String,
         price: Uint128
     }, 
+    /// Admin function: change admin address
+    SetAdmin { new_contract: String },
+    /// Admin function: change public key
+    SetPublicKey { public_key: String },
 }
 
 

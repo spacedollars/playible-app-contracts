@@ -18,6 +18,12 @@ pub enum ContractError {
     #[error("The token is not owned by the provided owner address")]
     InvalidToken {},
 
+    #[error("Signature doesn't match")]
+    BadSignature {},
+
     #[error("The provided message is invalid")]
     InvalidMessage {},
+
+    #[error("Invalid Secp256k1 Pubkey Format")]
+    InvalidSecp256k1PubkeyFormat {},
 }

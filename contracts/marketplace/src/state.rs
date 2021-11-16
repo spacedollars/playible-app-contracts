@@ -12,6 +12,8 @@ pub struct ContractInfoResponse {
     pub admin_addr: Addr,
     /// Stable coin denomination. 
     pub stable_denom: String,
+    /// public key that can sign transaction messages
+    pub public_key: String,
 }
 
 pub const CONTRACT_INFO: Item<ContractInfoResponse> = Item::new("contract_info");

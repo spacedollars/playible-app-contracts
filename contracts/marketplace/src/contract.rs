@@ -22,6 +22,10 @@ use crate::state::{ ContractInfoResponse, CONTRACT_INFO };
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:marketplace";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Length of a serialized compressed public key
+const ECDSA_COMPRESSED_PUBKEY_LEN: usize = 33;
+/// Length of a serialized uncompressed public key
+const ECDSA_UNCOMPRESSED_PUBKEY_LEN: usize = 65;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -34,10 +38,26 @@ pub fn instantiate(
 
     let admin_addr = deps.api.addr_validate(&msg.admin_addr)?;
 
+    let public_key = base64::decode(&msg.public_key).unwrap();
+
+    #[cfg(not(feature = "backtraces"))]
+    check_pubkey(&public_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
+        target_type: "public key".to_string(),
+        msg: format!("Parsing Public Key: {:?}", &e),
+    })?;
+
+    #[cfg(feature = "backtraces")]
+    check_pubkey(&public_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
+        target_type: "public key".to_string(),
+        msg: format!("Parsing Public Key: {:?}", &e),
+        backtrace: Default::default(),
+    })?;
+
     let info = ContractInfoResponse {
         name: msg.name,
         admin_addr: admin_addr,
         stable_denom: msg.stable_denom,
+        public_key: msg.public_key
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
@@ -60,6 +80,12 @@ pub fn execute(
             buyer_addr,
             price
         } => execute_temp_transaction(deps, env, info, contract_addr, owner_addr, token_id, buyer_addr, price),
+        ExecuteMsg::SetAdmin { 
+            new_contract 
+        } => set_admin_addr(deps, info, new_contract),
+        ExecuteMsg::SetPublicKey { 
+            public_key 
+        } => set_public_key(deps, info, public_key),
     }
 }
 
@@ -133,6 +159,75 @@ pub fn execute_temp_transaction(
     Ok(response)
 }
 
+pub fn set_admin_addr(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    new_contract: String,
+) -> Result<Response, ContractError> {
+
+    let contract_info = query_contract_info(deps.as_ref()).unwrap();
+    let new_address = deps.api.addr_validate(&new_contract)?;
+    let old_address = contract_info.admin_addr;
+
+    if info.sender != old_address.clone() {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let update = ContractInfoResponse {
+        name: contract_info.name,
+        admin_addr: new_address.clone(),
+        stable_denom: contract_info.stable_denom,
+        public_key: contract_info.public_key
+    };
+
+    CONTRACT_INFO.save(deps.branch().storage, &update)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "update_admin_addr")
+        .add_attribute("from", old_address.clone())
+        .add_attribute("to", new_address.clone()))
+}
+
+pub fn set_public_key(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    public_key: String,
+) -> Result<Response, ContractError> {
+
+    let contract_info = query_contract_info(deps.branch().as_ref()).unwrap();
+
+    if info.sender != contract_info.admin_addr {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let update = ContractInfoResponse {
+        name: contract_info.name,
+        admin_addr: contract_info.admin_addr,
+        stable_denom: contract_info.stable_denom,
+        public_key: public_key.clone()
+    };
+
+    CONTRACT_INFO.save(deps.branch().storage, &update)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "set_public_key")
+        .add_attribute("sender", info.sender)
+        .add_attribute("public_key", public_key.clone()))
+}
+
+fn check_pubkey(data: &[u8]) -> Result<(), ContractError> {
+
+    let ok = match data.first() {
+        Some(0x02) | Some(0x03) => data.len() == ECDSA_COMPRESSED_PUBKEY_LEN,
+        Some(0x04) => data.len() == ECDSA_UNCOMPRESSED_PUBKEY_LEN,
+        _ => false,
+    };
+    if ok {
+        Ok(())
+    } else {
+        Err(ContractError::InvalidSecp256k1PubkeyFormat {})
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
