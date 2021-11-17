@@ -7,17 +7,10 @@ use cosmwasm_std::{
 };
 
 use cw2::set_contract_version;
-// use cw20::{Cw20ExecuteMsg};
 
 use crate::error::ContractError;
 use crate::msg::{ InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg, OwnerOfResponse };
 use crate::state::{ ContractInfoResponse, CONTRACT_INFO };
-// use crate::helpers::{
-//     encode_msg_execute,
-//     encode_raw_query,
-//     encode_msg_query,
-// };
-// use crate::querier::{deduct_tax};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:marketplace";

@@ -481,11 +481,9 @@ dependencies = [
  "cw-storage-plus",
  "cw0",
  "cw2",
- "cw20",
  "schemars",
  "serde",
  "sha2 0.8.2",
- "terra-cosmwasm",
  "thiserror",
 ]
 
