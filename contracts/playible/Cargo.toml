@@ -1,11 +1,11 @@
 [package]
-name = "fantasy"
+name = "playible"
 version = "0.9.1"
 authors = ["Angelo Matias, Kurt Aquino"]
 edition = "2018"
 description = "Contract for Playible app functionalities"
 license = "Apache-2.0"
-repository = "https://github.com/terr-plaubile/playible-contracts"
+repository = "https://github.com/terra-playible/playible-contracts"
 homepage = "https://playible.io"
 documentation = "https://docs.cosmwasm.com"
 

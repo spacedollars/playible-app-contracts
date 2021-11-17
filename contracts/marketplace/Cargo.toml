@@ -1,0 +1,39 @@
+[package]
+name = "marketplace"
+version = "0.9.1"
+authors = ["Angelo Matias, Kurt Aquino"]
+edition = "2018"
+description = "Marketplace contract for posting and buying Playible NFTs"
+license = "Apache-2.0"
+repository = "https://github.com/terra-playible/playible-contracts"
+homepage = "https://playible.io"
+documentation = "https://docs.cosmwasm.com"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "artifacts/*",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all init/handle/query exports
+library = []
+
+[dependencies]
+cw0 = { version = "0.9.1" }
+cw2 = { version = "0.9.1" }
+cw-storage-plus = { version = "0.9.1" }
+cosmwasm-std = { version = "0.16.0" }
+schemars = "0.8.1"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.23" }
+sha2 = "0.8.0"
+base64="0.13.0"
+
+[dev-dependencies]
+cosmwasm-schema = { version = "0.16.0" }
