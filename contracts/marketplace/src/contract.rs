@@ -83,7 +83,7 @@ pub fn execute(
 }
 
 pub fn execute_temp_transaction(
-    deps: DepsMut,
+    mut deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     contract_addr: String,
@@ -93,32 +93,35 @@ pub fn execute_temp_transaction(
     price: Uint128
 ) -> Result<Response, ContractError> {
 
+    let contract_info = query_contract_info(deps.branch().as_ref()).unwrap();
     let collection = deps.api.addr_validate(&contract_addr)?;
     let owner = deps.api.addr_validate(&owner_addr)?;
     let buyer = deps.api.addr_validate(&buyer_addr)?;
 
-    if !query_temp_is_valid(
-        deps.as_ref(), 
+    if query_is_owner_valid(
+        deps.branch().as_ref(), 
         collection.clone(),
         owner.clone(),
         token_id.clone(),
-        buyer.clone(),
-        price.clone(),
-        info.sender,
-        info.funds
-    )?{
-        return Err(ContractError::InvalidMessage {});
+    )? {
+        if query_is_buyer_valid(
+            deps.branch().as_ref(), 
+            buyer.clone(),
+            info.sender,
+        )? {
+            if !query_is_funds_valid(
+                deps.branch().as_ref(), 
+                price.clone(),
+                info.funds
+            )? {
+                return Err(ContractError::InsufficientFunds{amount: price.clone(), denom: contract_info.stable_denom})
+            }
+        } else {
+            return Err(ContractError::BuyerMismatch {});
+        }
+    } else {
+        return Err(ContractError::InvalidToken {});
     }
-
-    // if info.sender != buyer.clone() {
-    //     return Err(ContractError::BuyerMismatch{})
-    // }
-
-    // if info.funds.len() != 1 || 
-    //     info.funds[0].denom != contract_info.stable_denom || 
-    //     info.funds[0].amount != price.clone() {
-    //     return Err(ContractError::WrongAmount{amount: price.clone(), denom: contract_info.stable_denom})
-    // }
 
     let mut response = Response::new()
         .add_attribute("action", "temp_transaction")
@@ -218,7 +221,7 @@ fn check_pubkey(data: &[u8]) -> Result<(), ContractError> {
     if ok {
         Ok(())
     } else {
-        Err(ContractError::InvalidSecp256k1PubkeyFormat {})
+        Err(ContractError::InvalidSecp256k1PubkeyFormat {}) 
     }
 }
 
@@ -249,32 +252,54 @@ fn query_public_key(
     Ok(query_contract_info(deps).unwrap().public_key)
 }
 
-fn query_temp_is_valid(
+// If the token owner matches the provided owner address
+fn query_is_owner_valid(
     deps: Deps,
     contract_addr: Addr,
     owner_addr: Addr,
     token_id: String,
+) -> StdResult<bool> {
+
+    let token_owner = query_token_owner(deps, contract_addr.clone(), token_id.clone(),).unwrap();
+    let mut is_valid = false;
+    
+    if token_owner.owner == owner_addr.clone() {
+        is_valid = true;        
+    }
+
+    Ok(is_valid)
+}
+
+// If token buyer address matches sender address
+fn query_is_buyer_valid(
+    _deps: Deps,
     buyer_addr: Addr,
-    price: Uint128,
     sender: Addr,
+) -> StdResult<bool> {
+
+    let mut is_valid = false;
+    
+    if sender != buyer_addr.clone() {
+        is_valid = true;
+    }
+
+    Ok(is_valid)
+}
+
+// If the provided funds matches the listed price
+fn query_is_funds_valid(
+    deps: Deps,
+    price: Uint128,
     funds: Vec<Coin>
 ) -> StdResult<bool> {
 
     let contract_info = query_contract_info(deps).unwrap();
-    let token_owner = query_token_owner(deps, contract_addr.clone(), token_id.clone(),).unwrap();
     let mut is_valid = false;
     
-    // If the token owner matches provided owner address
-    if token_owner.owner == owner_addr.clone() {
-        // If token buyer address matches sender address
-        if sender != buyer_addr.clone() {
-            // If the provided funds matches the listed sale price
-            if funds.len() != 1 || 
-               funds[0].denom != contract_info.stable_denom || 
-               funds[0].amount != price.clone() {
-                is_valid = true;
-            }
-        }
+    if funds.len() != 1 || 
+       funds[0].denom != contract_info.stable_denom || 
+       funds[0].amount != price.clone() {
+        is_valid = true;
     }
 
     Ok(is_valid)

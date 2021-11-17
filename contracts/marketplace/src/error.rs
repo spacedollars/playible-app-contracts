@@ -9,8 +9,11 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("The provided message is invalid")]
+    InvalidMessage {},
+
     #[error("You need to send exactly {}{} to purchase this token", amount, denom)]
-    WrongAmount { amount: Uint128, denom: String },
+    InsufficientFunds { amount: Uint128, denom: String },
 
     #[error("The token buyer address does not match sender address")]
     BuyerMismatch {},
@@ -20,9 +23,6 @@ pub enum ContractError {
 
     #[error("Signature doesn't match")]
     BadSignature {},
-
-    #[error("The provided message is invalid")]
-    InvalidMessage {},
 
     #[error("Invalid Secp256k1 Pubkey Format")]
     InvalidSecp256k1PubkeyFormat {},
