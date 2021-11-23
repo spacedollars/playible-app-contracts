@@ -12,8 +12,6 @@ pub struct InstantiateMsg {
     pub admin_addr: String,
     /// Stable coin denomination. 
     pub stable_denom: String,
-    /// public key that can sign transaction messages
-    pub public_key: String,
 }  
 
 
