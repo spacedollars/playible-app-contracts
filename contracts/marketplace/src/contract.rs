@@ -10,7 +10,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ InstantiateMsg, ExecuteMsg, QueryMsg, TokenMsg, OwnerOfResponse };
-use crate::state::{ ContractInfoResponse, CONTRACT_INFO };
+use crate::state::{ ContractInfoResponse, CONTRACT_INFO, PUBLIC_KEY };
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:marketplace";
@@ -31,29 +31,14 @@ pub fn instantiate(
 
     let admin_addr = deps.api.addr_validate(&msg.admin_addr)?;
 
-    let public_key = base64::decode(&msg.public_key).unwrap();
-
-    #[cfg(not(feature = "backtraces"))]
-    check_pubkey(&public_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
-        target_type: "public key".to_string(),
-        msg: format!("Parsing Public Key: {:?}", &e),
-    })?;
-
-    #[cfg(feature = "backtraces")]
-    check_pubkey(&public_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
-        target_type: "public key".to_string(),
-        msg: format!("Parsing Public Key: {:?}", &e),
-        backtrace: Default::default(),
-    })?;
-
     let info = ContractInfoResponse {
         name: msg.name,
         admin_addr: admin_addr,
         stable_denom: msg.stable_denom,
-        public_key: msg.public_key
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &info)?;
+    PUBLIC_KEY.save(deps.branch().storage, &"public_key".to_string())?;
 
     Ok(Response::default())
 }
@@ -173,7 +158,6 @@ pub fn set_admin_addr(
         name: contract_info.name,
         admin_addr: new_address.clone(),
         stable_denom: contract_info.stable_denom,
-        public_key: contract_info.public_key
     };
 
     CONTRACT_INFO.save(deps.branch().storage, &update)?;
@@ -196,14 +180,22 @@ pub fn set_public_key(
         return Err(ContractError::Unauthorized {});
     }
 
-    let update = ContractInfoResponse {
-        name: contract_info.name,
-        admin_addr: contract_info.admin_addr,
-        stable_denom: contract_info.stable_denom,
-        public_key: public_key.clone()
-    };
+    let pub_key = base64::decode(&public_key).unwrap();
 
-    CONTRACT_INFO.save(deps.branch().storage, &update)?;
+    #[cfg(not(feature = "backtraces"))]
+    check_pubkey(&pub_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
+        target_type: "public key".to_string(),
+        msg: format!("Parsing Public Key: {:?}", &e),
+    })?;
+
+    #[cfg(feature = "backtraces")]
+    check_pubkey(&pub_key).map_err(|e| cosmwasm_std::StdError::ParseErr {
+        target_type: "public key".to_string(),
+        msg: format!("Parsing Public Key: {:?}", &e),
+        backtrace: Default::default(),
+    })?;
+
+    PUBLIC_KEY.save(deps.branch().storage, &public_key)?;
 
     Ok(Response::new()
         .add_attribute("action", "set_public_key")
@@ -249,7 +241,7 @@ fn query_admin(
 fn query_public_key(
     deps: Deps,
 ) -> StdResult<String> {
-    Ok(query_contract_info(deps).unwrap().public_key)
+    PUBLIC_KEY.load(deps.storage)
 }
 
 // If the token owner matches the provided owner address
